@@ -1,0 +1,11 @@
+{
+  "enabledPlugins": {
+    "product-management@knowledge-work-plugins": true,
+    "dotnet-test@dotnet-agent-skills": true,
+    "dotnet-aspnetcore@dotnet-agent-skills": true,
+    "dotnet-data@dotnet-agent-skills": true,
+    "humanizer@humanizer": true,
+    "ui-ux-pro-max@ui-ux-pro-max-skill": true,
+    "context7@context7-marketplace": true
+  }
+}
