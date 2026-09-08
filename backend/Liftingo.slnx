@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="src/Liftingo.Api/Liftingo.Api.csproj" Id="827b7fbe-9fc3-490d-8934-c7a11958eaa9" />
+  <Project Path="src/Liftingo.Application/Liftingo.Application.csproj" Id="e1029b68-2211-4b1c-9df5-f4645a45b602" />
+  <Project Path="src/Liftingo.Domain/Liftingo.Domain.csproj" Id="b0c650fc-20b5-4851-9240-23270db25b54" />
+  <Project Path="src/Liftingo.Infrastructure/Liftingo.Infrastructure.csproj" Id="500d2839-5c81-48a3-89e5-72c526d8620b" />
+  <Project Path="tests/Liftingo.ArchitectureTests/Liftingo.ArchitectureTests.csproj" Id="6f8fbb28-9895-419a-b01c-6dbcd20e4be2" />
+</Solution>
