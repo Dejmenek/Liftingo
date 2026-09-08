@@ -14,32 +14,46 @@ Liftingo/
 │   ├── CLAUDE.md
 │   ├── Liftingo.sln
 │   ├── src/
+│   │   ├── Liftingo.Domain/
+│   │   │   ├── Account/            # entities, value objects, domain events, grouped by module
+│   │   │   ├── Plans/
+│   │   │   ├── WorkoutLog/
+│   │   │   ├── ExerciseLibrary/
+│   │   │   ├── Statistics/
+│   │   │   ├── CardioMobility/
+│   │   │   ├── Gamification/
+│   │   │   ├── Social/
+│   │   │   ├── Privacy/
+│   │   │   └── Common/             # base entity, domain exceptions, shared value objects
+│   │   ├── Liftingo.Application/
+│   │   │   ├── Features/
+│   │   │   │   ├── Account/
+│   │   │   │   │   ├── Register.cs
+│   │   │   │   │   ├── Login.cs
+│   │   │   │   │   └── ...
+│   │   │   │   ├── Plans/
+│   │   │   │   ├── WorkoutLog/
+│   │   │   │   ├── ExerciseLibrary/
+│   │   │   │   ├── Statistics/
+│   │   │   │   ├── CardioMobility/
+│   │   │   │   ├── Gamification/
+│   │   │   │   ├── Social/
+│   │   │   │   └── Privacy/
+│   │   │   └── Common/
+│   │   │       ├── Result/            # Result<T> pattern
+│   │   │       ├── Persistence/       # IApplicationDbContext
+│   │   │       ├── Routes/            # RouteConsts
+│   │   │       └── ...                # other cross-cutting interfaces (IAiClient, IEmailSender, ...)
+│   │   ├── Liftingo.Infrastructure/
+│   │   │   ├── Persistence/        # ApplicationDbContext (implements IApplicationDbContext), EF configurations, migrations
+│   │   │   ├── Identity/
+│   │   │   ├── Jobs/               # Hangfire job definitions
+│   │   │   ├── Ai/                 # Microsoft Foundry client
+│   │   │   ├── Email/              # Azure Communication Services
+│   │   │   └── Storage/            # Azure Blob Storage, QuestPDF
 │   │   └── Liftingo.Api/
-│   │       ├── Features/
-│   │       │   ├── Account/
-│   │       │   │   ├── Register.cs
-│   │       │   │   ├── Login.cs
-│   │       │   │   └── ...
-│   │       │   ├── Plans/
-│   │       │   ├── WorkoutLog/
-│   │       │   ├── ExerciseLibrary/
-│   │       │   ├── Statistics/
-│   │       │   ├── CardioMobility/
-│   │       │   ├── Gamification/
-│   │       │   ├── Social/
-│   │       │   └── Privacy/
-│   │       ├── Common/
-│   │       │   ├── Result/            # Result<T> pattern
-│   │       │   ├── Routes/            # RouteConsts
-│   │       │   └── ...
-│   │       ├── Infrastructure/
-│   │       │   ├── Persistence/       # DbContext, EF configurations, migrations
-│   │       │   ├── Identity/
-│   │       │   ├── Jobs/              # Hangfire job definitions
-│   │       │   ├── Ai/                # Microsoft Foundry client
-│   │       │   ├── Email/             # Azure Communication Services
-│   │       │   └── Storage/           # Azure Blob Storage, QuestPDF
-│   │       └── Program.cs
+│   │       ├── Program.cs
+│   │       └── ...                 # endpoint mapping, DI wiring, middleware
 │   └── tests/
 │       ├── Liftingo.Api.UnitTests/
 │       └── Liftingo.Api.IntegrationTests/
@@ -49,6 +63,8 @@ Liftingo/
 └── docs/
     └── Liftingo_PRD.md
 ```
+
+Backend follows vertical slice architecture inside a Clean Architecture project split: `Domain` → `Application` → `Infrastructure`/`Api`, dependencies point inward. See `backend/CLAUDE.md` for details.
 
 ## Common commands
 
