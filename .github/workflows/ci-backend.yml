@@ -1,0 +1,42 @@
+name: CI - Backend
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - '.github/workflows/ci-backend.yml'
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  SOLUTION_PATH: 'backend/Liftingo.slnx'
+  DOTNET_VERSION: '10.0.x'
+  BUILD_CONFIGURATION: 'Release'
+
+jobs:
+ test:
+   runs-on: ubuntu-latest
+   steps:
+     - name: Checkout code
+       uses: actions/checkout@v4
+
+     - name: Setup .NET SDK ${{ env.DOTNET_VERSION }}
+       uses: actions/setup-dotnet@v4
+       with:
+         dotnet-version: ${{ env.DOTNET_VERSION }}
+
+     - name: Restore dependencies
+       run: dotnet restore ${{ env.SOLUTION_PATH }}
+
+     - name: Verify format
+       run: dotnet format ${{ env.SOLUTION_PATH }} --verify-no-changes --verbosity diagnostic
+
+     - name: Build in Release mode
+       run: dotnet build ${{ env.SOLUTION_PATH }} --configuration ${{ env.BUILD_CONFIGURATION }} --no-restore
+
+     - name: Run Tests
+       run: dotnet test --solution ${{ env.SOLUTION_PATH }} --configuration ${{ env.BUILD_CONFIGURATION }} --no-build --verbosity normal
