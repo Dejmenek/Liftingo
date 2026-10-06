@@ -48,6 +48,7 @@ Every slice returns `Result<T>` for expected failures (validation, not found, co
 - Endpoint handlers are `async` and accept a `CancellationToken`.
 - FluentValidation validators are colocated in the same file as the endpoint they validate.
 - Test naming: `[Method]_[Scenario]_[ExpectedResult]`.
+- Log messages must not contain e-mail addresses, names, body data or set values. Log the user id to identify a user.
 
 ## Patterns we use
 
