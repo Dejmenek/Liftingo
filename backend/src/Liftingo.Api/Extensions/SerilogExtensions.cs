@@ -1,6 +1,5 @@
-using System.Globalization;
-
 using Serilog;
+using System.Globalization;
 
 namespace Liftingo.Api.Extensions;
 
