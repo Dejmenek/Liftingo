@@ -152,7 +152,7 @@ The following stack is binding; deviations require a constitution amendment.
 - **Hosting and delivery**: Azure App Service (backend), Azure Static Web Apps (frontend), GitHub
   Actions for build, test and deploy, Docker for local dependencies.
 - **Security**: passwords ≥ 8 chars with ≥ 1 digit and ≥ 1 special character; login attempt
-  lockout (5 failures / 15 min) and audit logging; no account enumeration on recovery flows.
+  lockout (15 min after 5 consecutive failures) and audit logging; no account enumeration on recovery flows.
 - **Performance targets**: first load ≤ 3 s on 4G (p75), AI plan generation ≤ 10 s (p95), set
   save ≤ 2 s (p95).
 - **Compatibility**: current and two previous major versions of Chrome, Safari, Firefox, Edge.
@@ -190,4 +190,4 @@ frontend) are the source of runtime development guidance.
 - **Dependency drift**: when a PRD requirement or tech-stack choice changes, this constitution and
   the relevant `AGENTS.md` MUST be updated in the same change.
 
-**Version**: 1.0.0 | **Ratified**: 2026-10-06 | **Last Amended**: 2026-10-06
+**Version**: 1.0.1 | **Ratified**: 2026-10-06 | **Last Amended**: 2026-10-07
