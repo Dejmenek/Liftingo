@@ -253,11 +253,20 @@ dotnet_naming_style.pascal_case.capitalization = pascal_case
 # ASP.NET Core and console apps don't have one, so it's pure noise here.
 dotnet_diagnostic.CA2007.severity = none
 
+# CA1062: Validate arguments of public methods.
+# Nullable reference types are enabled everywhere, and the analyzer also flags primary
+# constructor parameters, which would force a guard clause on every injected dependency.
+dotnet_diagnostic.CA1062.severity = none
+
 # CA1707: Identifiers should not contain underscores.
 # backend/AGENTS.md mandates [Method]_[Scenario]_[ExpectedResult] for test names, so
 # it's disabled for test files only (mirrors the "Tests" file-name suffix from AGENTS.md).
 [*Tests.cs]
 dotnet_diagnostic.CA1707.severity = none
+
+# CA1515: the architecture test base class has to be public because the public test classes inherit from it.
+[**/BaseTest.cs]
+dotnet_diagnostic.CA1515.severity = none
 
 # Result<T> pattern (Common/Result): a known, deliberately-shaped implementation
 # (Result/Result<TValue>/Error/ErrorType/ValidationError) that trades a few CA rules
