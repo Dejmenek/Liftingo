@@ -66,6 +66,21 @@ Every slice returns `Result<T>` for expected failures (validation, not found, co
 - MediatR or other mediators: the endpoint handler is the entry point and does the work directly.
 - Exceptions for business logic flow: expected failures (validation, not found, conflicts, rule violations) use `Result<T>` instead.
 
+## Testing
+
+- **`Liftingo.Api.UnitTests`**: logic that needs no database: validators, domain entities and value objects, the rules engine and methodology validator, `Result<T>`, `UserContext`. The folders mirror the source (`Domain/{Module}/`, `Features/{Module}/`, `Common/`). Use NSubstitute for dependencies and Bogus for data.
+- **`Liftingo.Api.IntegrationTests`**: endpoints and handlers against a real SQL Server container. Handlers query `IApplicationDbContext` directly, and mocking `DbSet<T>` is unreliable, so these tests don't use an in-memory provider or mocks.
+- **`Liftingo.ArchitectureTests`**: layer and dependency rules.
+
+Integration test infrastructure lives in `tests/Liftingo.Api.IntegrationTests/Infrastructure/`:
+
+- `SqlServerFixture`: starts one `MsSqlContainer` per test run, applies the EF Core migrations once and creates the `ApiFactory`. It also resets the data with Respawn and keeps the migrated schema.
+- `ApiFactory`: `WebApplicationFactory<Program>` that runs in the `Testing` environment and replaces `ConnectionStrings:Default` with the container's connection string.
+- `IntegrationTestCollectionDefinition` and `IntegrationTestBase`: derive test classes from `IntegrationTestBase`. They join the shared collection, so there is only one container, and the database is reset before every test.
+- `Fakers/`: Bogus fakers for test data.
+
+Test groups (xUnit collections) never run in parallel (`[assembly: Parallelization(Mode = ParallelMode.None)]`), and tests inside a group run one at a time. Integration tests need Docker running.
+
 ## Common commands
 
 ```bash
