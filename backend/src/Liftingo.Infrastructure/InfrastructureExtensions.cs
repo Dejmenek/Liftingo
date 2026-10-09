@@ -1,3 +1,4 @@
+using Liftingo.Application.Common;
 using Liftingo.Application.Common.Persistence;
 using Liftingo.Infrastructure.Identity;
 using Liftingo.Infrastructure.Persistence;
@@ -17,6 +18,9 @@ public static class InfrastructureExtensions
     {
         services.AddPersistence(configuration);
         services.AddIdentityServices(configuration);
+
+        services.AddHttpContextAccessor();
+        services.AddScoped<IUserContext, UserContext>();
 
         return services;
     }
