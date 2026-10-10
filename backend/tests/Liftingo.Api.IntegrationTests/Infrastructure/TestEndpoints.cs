@@ -59,6 +59,10 @@ public sealed class TestEndpointsStartupFilter : IStartupFilter
     public const string ResultPath = "/test/result";
     public const string ValidationResultPath = "/test/result/validation";
     public const string GetOnlyPath = "/test/get-only";
+    public const string SlowPath = "/test/slow";
+    public const string SlowNamedPolicyPath = "/test/slow/named";
+    public const string SlowNamedPolicyName = "TestLong";
+    public static readonly TimeSpan SlowDelay = TimeSpan.FromSeconds(1);
     public const string ClientIpHeader = "X-Test-Client-Ip";
     public const string UserIdHeader = "X-Test-User-Id";
     public const string ExceptionMessage = "Weight must be positive";
@@ -84,15 +88,29 @@ public sealed class TestEndpointsStartupFilter : IStartupFilter
                 await nextMiddleware();
             });
 
+            // The app maps no endpoints yet, so it doesn't add routing on its own. Routing has to run
+            // before the app's middleware, because request timeouts read the endpoint's policy.
+            app.UseRouting();
+
             next(app);
 
-            // The app maps no endpoints yet, so it doesn't add routing on its own.
-            app.UseRouting();
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapGet(DomainExceptionPath, () => Throw(new TestDomainException(ExceptionMessage)));
                 endpoints.MapGet(UnhandledExceptionPath, () => Throw(new InvalidOperationException(SecretMessage)));
                 endpoints.MapGet(GetOnlyPath, () => Results.Ok());
+                endpoints.MapGet(SlowPath, async (CancellationToken cancellationToken) =>
+                {
+                    await Task.Delay(SlowDelay, cancellationToken);
+
+                    return Results.Ok();
+                });
+                endpoints.MapGet(SlowNamedPolicyPath, async (CancellationToken cancellationToken) =>
+                {
+                    await Task.Delay(SlowDelay, cancellationToken);
+
+                    return Results.Ok();
+                }).WithRequestTimeout(SlowNamedPolicyName);
                 endpoints.MapGet($"{ResultPath}/{{type}}", (ErrorType type) =>
                     Result.Failure(new Error("Test.Error", "Test description", type)).ToProblem());
                 endpoints.MapGet(ValidationResultPath, () => Result.Failure(ValidationError.FromErrors(
