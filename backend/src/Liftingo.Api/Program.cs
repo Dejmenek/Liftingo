@@ -16,6 +16,8 @@ try
 
     builder.Services.AddExceptionHandling(builder.Environment);
 
+    builder.Services.AddRateLimiting(builder.Configuration);
+
     builder.Services.AddInfrastructure(builder.Configuration);
 
     var app = builder.Build();
@@ -33,6 +35,8 @@ try
     }
 
     app.UseHttpsRedirection();
+
+    app.UseRateLimiting();
 
     await app.RunAsync();
 
