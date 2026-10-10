@@ -5,9 +5,13 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Primitives;
 
 using Serilog.Core;
 using Serilog.Events;
+
+using System.Net;
+using System.Security.Claims;
 
 namespace Liftingo.Api.IntegrationTests.Infrastructure;
 
@@ -55,12 +59,31 @@ public sealed class TestEndpointsStartupFilter : IStartupFilter
     public const string ResultPath = "/test/result";
     public const string ValidationResultPath = "/test/result/validation";
     public const string GetOnlyPath = "/test/get-only";
+    public const string ClientIpHeader = "X-Test-Client-Ip";
+    public const string UserIdHeader = "X-Test-User-Id";
     public const string ExceptionMessage = "Weight must be positive";
     public const string SecretMessage = "secret-internal-message";
 
     public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) =>
         app =>
         {
+            app.Use(async (context, nextMiddleware) =>
+            {
+                if (context.Request.Headers.TryGetValue(ClientIpHeader, out StringValues ip))
+                {
+                    context.Connection.RemoteIpAddress = IPAddress.Parse(ip.ToString());
+                }
+
+                if (context.Request.Headers.TryGetValue(UserIdHeader, out StringValues userId))
+                {
+                    context.User = new ClaimsPrincipal(new ClaimsIdentity(
+                        [new Claim(ClaimTypes.NameIdentifier, userId.ToString())],
+                        authenticationType: "Test"));
+                }
+
+                await nextMiddleware();
+            });
+
             next(app);
 
             // The app maps no endpoints yet, so it doesn't add routing on its own.
