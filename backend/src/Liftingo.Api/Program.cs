@@ -1,3 +1,5 @@
+using Asp.Versioning;
+
 using Liftingo.Api.Extensions;
 using Liftingo.Infrastructure;
 
@@ -11,8 +13,7 @@ try
 
     builder.AddSerilogLogging();
 
-    // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-    builder.Services.AddOpenApi();
+    builder.Services.AddApiVersioningWithOpenApi();
 
     builder.Services.AddExceptionHandling(builder.Environment);
 
@@ -31,7 +32,7 @@ try
     // Configure the HTTP request pipeline.
     if (app.Environment.IsDevelopment())
     {
-        app.MapOpenApi();
+        app.MapOpenApi().WithDocumentPerVersion();
 
         await app.ApplyMigrationsAsync();
     }
@@ -41,6 +42,8 @@ try
     app.UseRateLimiting();
 
     app.UseRequestTimeoutPolicies();
+
+    app.MapVersionedApi();
 
     await app.RunAsync();
 
