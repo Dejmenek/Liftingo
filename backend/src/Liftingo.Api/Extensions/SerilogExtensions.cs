@@ -1,4 +1,5 @@
 using Serilog;
+using Serilog.Events;
 using System.Globalization;
 
 namespace Liftingo.Api.Extensions;
@@ -22,9 +23,25 @@ internal static class SerilogExtensions
 
     public static WebApplication UseSerilogLogging(this WebApplication app)
     {
-        // Query strings and request bodies can contain personal data, so they stay out of the logs.
-        app.UseSerilogRequestLogging(options => options.IncludeQueryInRequestPath = false);
+        app.UseSerilogRequestLogging(options =>
+        {
+            options.IncludeQueryInRequestPath = false;
+
+            options.GetLevel = static (httpContext, _, exception) => GetRequestLogLevel(httpContext, exception);
+        });
 
         return app;
+    }
+
+    private static LogEventLevel GetRequestLogLevel(HttpContext httpContext, Exception? exception)
+    {
+        if (exception is not null)
+        {
+            return LogEventLevel.Verbose;
+        }
+
+        return httpContext.Response.StatusCode >= StatusCodes.Status500InternalServerError
+            ? LogEventLevel.Error
+            : LogEventLevel.Information;
     }
 }
