@@ -32,6 +32,15 @@ Still no controller/service layer and no per-aggregate repositories: a slice han
 
 Every slice returns `Result<T>` for expected failures (validation, not found, conflict, rule violations); exceptions are for unexpected conditions only, not business logic flow.
 
+## Error handling
+
+All errors leave the API as RFC 9457 `ProblemDetails` with a `traceId`. There are two failure mechanisms:
+
+- **`Result<T>`** for expected failures: validation, not found, conflict, rule violations the caller can fix.
+- **`DomainException`** for invariants the domain model refuses to break. The message is returned to clients, so write it for users and keep personal data out of it.
+
+Any other exception becomes a generic 500 with no message.
+
 ## File naming
 
 - One file per endpoint, named after the endpoint/use case in PascalCase (e.g. `CreateWorkoutSession.cs`, `GenerateAiPlan.cs`), not after the HTTP verb. Lives in `Liftingo.Application/Features/{Module}/`.
