@@ -40,6 +40,8 @@ ng generate guard core/auth/auth --functional
 ng generate interceptor core/http/auth-token --functional
 ```
 
+The backend serves one OpenAPI document per API version (`/openapi/v1.json`), so the NSwag client is generated per API version. Point `nswag.json` at the document of the version the client calls.
+
 Regenerating the NSwag API client from the backend's OpenAPI spec (run after any backend endpoint change):
 
 ```bash

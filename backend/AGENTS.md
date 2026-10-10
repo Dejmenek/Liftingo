@@ -46,7 +46,7 @@ Any other exception becomes a generic 500 with no message.
 - One file per endpoint, named after the endpoint/use case in PascalCase (e.g. `CreateWorkoutSession.cs`, `GenerateAiPlan.cs`), not after the HTTP verb. Lives in `Liftingo.Application/Features/{Module}/`.
 - A slice file contains, in order: request DTO, response DTO, validator, and the endpoint handler/route registration.
 - Test files mirror the slice under test with a `Tests` suffix (e.g. `CreateWorkoutSessionTests.cs`).
-- Route constants live centrally in `RouteConsts` (`Liftingo.Application/Common/Routes/`), not inline as magic strings in each slice.
+- Route constants live centrally in `RouteConsts` (`Liftingo.Application/Common/Routes/`), not inline as magic strings in each slice. They hold the route template without the version prefix (`/ping`, not `/api/v1/ping`); `Api` adds the prefix once.
 
 ## Code conventions
 
