@@ -11,9 +11,14 @@ namespace Liftingo.Api.IntegrationTests.Infrastructure;
 /// <c>RateLimiting</c> configuration overrides. When <c>null</c>, rate limiting is switched off so
 /// only the tests that opt in are affected by it.
 /// </param>
+/// <param name="requestTimeoutsSettings">
+/// <c>RequestTimeouts</c> configuration overrides. When <c>null</c>, the values from
+/// <c>appsettings.json</c> apply.
+/// </param>
 public sealed class ApiFactory(
     string connectionString,
-    IReadOnlyDictionary<string, string?>? rateLimitingSettings = null) : WebApplicationFactory<Program>
+    IReadOnlyDictionary<string, string?>? rateLimitingSettings = null,
+    IReadOnlyDictionary<string, string?>? requestTimeoutsSettings = null) : WebApplicationFactory<Program>
 {
     public const string EnvironmentName = "Testing";
 
@@ -43,6 +48,11 @@ public sealed class ApiFactory(
             if (rateLimitingSettings is not null)
             {
                 configuration.AddInMemoryCollection(rateLimitingSettings);
+            }
+
+            if (requestTimeoutsSettings is not null)
+            {
+                configuration.AddInMemoryCollection(requestTimeoutsSettings);
             }
         });
     }
