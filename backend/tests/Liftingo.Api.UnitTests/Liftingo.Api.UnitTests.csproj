@@ -26,6 +26,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Liftingo.Api\Liftingo.Api.csproj" />
     <ProjectReference Include="..\..\src\Liftingo.Domain\Liftingo.Domain.csproj" />
     <ProjectReference Include="..\..\src\Liftingo.Application\Liftingo.Application.csproj" />
     <ProjectReference Include="..\..\src\Liftingo.Infrastructure\Liftingo.Infrastructure.csproj" />
