@@ -8,9 +8,13 @@ public sealed class ApiFactory(string connectionString) : WebApplicationFactory<
 {
     public const string EnvironmentName = "Testing";
 
+    public LogEventCollector Logs { get; } = new();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment(EnvironmentName);
+
+        builder.ConfigureServices(services => services.AddTestEndpoints(Logs));
 
         builder.ConfigureAppConfiguration((_, configuration) =>
             configuration.AddInMemoryCollection(new Dictionary<string, string?>
