@@ -12,7 +12,6 @@ public class DependencyGuardTests : BaseTest
         Types().That().ResideInAssembly(DomainAssembly).Should()
             .NotDependOnAnyTypesThat()
             .ResideInNamespace("Microsoft.AspNetCore.Identity")
-            .WithoutRequiringPositiveResults()
             .Check(Architecture);
     }
 
@@ -22,7 +21,6 @@ public class DependencyGuardTests : BaseTest
         Types().That().ResideInAssembly(ApplicationAssembly).Should()
             .NotDependOnAnyTypesThat()
             .ResideInNamespace("Microsoft.AspNetCore.Identity")
-            .WithoutRequiringPositiveResults()
             .Check(Architecture);
     }
 }
