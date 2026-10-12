@@ -5,6 +5,8 @@ using Microsoft.EntityFrameworkCore;
 
 using Respawn;
 
+using StackExchange.Redis;
+
 using Testcontainers.MsSql;
 using Testcontainers.Redis;
 
@@ -18,6 +20,8 @@ public sealed class SqlServerFixture : IAsyncLifetime
     private readonly RedisContainer _redisContainer = new RedisBuilder("redis:latest").Build();
 
     private Respawner? _respawner;
+
+    private ConnectionMultiplexer? _redisAdmin;
 
     public ApiFactory Factory { get; private set; } = null!;
 
@@ -37,8 +41,18 @@ public sealed class SqlServerFixture : IAsyncLifetime
         _respawner = await Respawner.CreateAsync(connection, new RespawnerOptions
         {
             DbAdapter = DbAdapter.SqlServer,
-            TablesToIgnore = [new Respawn.Graph.Table("__EFMigrationsHistory")],
+            // The key ring must survive resets: the app caches it, and wrapped audit keys depend on it.
+            TablesToIgnore =
+            [
+                new Respawn.Graph.Table("__EFMigrationsHistory"),
+                new Respawn.Graph.Table("DataProtectionKeys"),
+            ],
         });
+
+        // FLUSHALL is an admin command.
+        ConfigurationOptions redisOptions = ConfigurationOptions.Parse(RedisConnectionString);
+        redisOptions.AllowAdmin = true;
+        _redisAdmin = await ConnectionMultiplexer.ConnectAsync(redisOptions);
 
         Factory = new ApiFactory(ConnectionString, RedisConnectionString);
     }
@@ -56,11 +70,30 @@ public sealed class SqlServerFixture : IAsyncLifetime
         await _respawner.ResetAsync(connection);
     }
 
+    /// <summary>Removes every key (sessions, refresh tokens), so no test sees another test's sessions.</summary>
+    public async Task FlushRedisAsync()
+    {
+        if (_redisAdmin is null)
+        {
+            throw new InvalidOperationException("The fixture has not been initialized.");
+        }
+
+        foreach (System.Net.EndPoint endpoint in _redisAdmin.GetEndPoints())
+        {
+            await _redisAdmin.GetServer(endpoint).FlushAllDatabasesAsync();
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (Factory is not null)
         {
             await Factory.DisposeAsync();
+        }
+
+        if (_redisAdmin is not null)
+        {
+            await _redisAdmin.DisposeAsync();
         }
 
         await _container.DisposeAsync();

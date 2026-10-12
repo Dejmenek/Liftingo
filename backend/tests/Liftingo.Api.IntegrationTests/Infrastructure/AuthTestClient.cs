@@ -1,0 +1,183 @@
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text.RegularExpressions;
+
+using Liftingo.Api.IntegrationTests.Infrastructure.Fakers;
+using Liftingo.Application.Common.Email;
+using Liftingo.Application.Common.Routes;
+using Liftingo.Application.Features.Account.Shared;
+
+namespace Liftingo.Api.IntegrationTests.Infrastructure;
+
+/// <summary>The <c>liftingo_rt</c> cookie as the API set it on a response.</summary>
+/// <param name="Value">The refresh token; empty when the cookie was deleted.</param>
+/// <param name="Attributes">Every attribute, e.g. <c>httponly</c>, <c>path</c>, <c>max-age</c> (names are matched case-insensitively).</param>
+public sealed record RefreshCookie(string Value, IReadOnlyDictionary<string, string> Attributes)
+{
+    public bool HttpOnly => Attributes.ContainsKey("httponly");
+
+    public bool Secure => Attributes.ContainsKey("secure");
+
+    public string? SameSite => Attributes.GetValueOrDefault("samesite");
+
+    public string? Path => Attributes.GetValueOrDefault("path");
+
+    public long? MaxAgeSeconds => Attributes.TryGetValue("max-age", out string? value) ? long.Parse(value, System.Globalization.CultureInfo.InvariantCulture) : null;
+
+    // The API deletes a cookie by expiring it with an empty value.
+    public bool IsDeleted => Value.Length == 0;
+}
+
+/// <summary>
+/// One "device" calling the auth API: it owns a cookie-aware <see cref="HttpClient"/>, so the refresh
+/// cookie from register/login/refresh is sent back automatically on the next call.
+/// </summary>
+public sealed partial class AuthTestClient(Func<bool, HttpClient> createClient) : IDisposable
+{
+    private const string ApiPrefix = "/api/v1";
+
+    private readonly HttpClient _http = createClient(true);
+
+    public HttpClient Http => _http;
+
+    public static string Route(string authRoute) => ApiPrefix + authRoute;
+
+    /// <summary>Registers an account. Without arguments it generates a unique e-mail and a valid password.</summary>
+    public async Task<(HttpResponseMessage Response, RegisterRequestBody Request)> RegisterAsync(
+        string? email = null,
+        string? password = null,
+        Guid? deviceId = null)
+    {
+        RegisterRequestBody generated = new RegisterRequestFaker().Generate();
+        RegisterRequestBody request = generated with
+        {
+            Email = email ?? generated.Email,
+            Password = password ?? generated.Password,
+        };
+
+        return (await PostAsync(RouteConsts.Auth.Register, request, accessToken: null, deviceId), request);
+    }
+
+    public Task<HttpResponseMessage> RegisterAsync(RegisterRequestBody request, Guid? deviceId = null) =>
+        PostAsync(RouteConsts.Auth.Register, request, accessToken: null, deviceId);
+
+    public Task<HttpResponseMessage> LoginAsync(string email, string password, Guid? deviceId = null) =>
+        PostAsync(RouteConsts.Auth.Login, new { email, password }, accessToken: null, deviceId);
+
+    /// <summary>Calls refresh with this client's own cookie.</summary>
+    public Task<HttpResponseMessage> RefreshAsync() =>
+        PostAsync(RouteConsts.Auth.RefreshSession, body: null, accessToken: null, deviceId: null);
+
+    /// <summary>Calls refresh with an explicit cookie value (e.g. a replayed one), ignoring this client's cookies.</summary>
+    public async Task<HttpResponseMessage> RefreshWithCookieAsync(string refreshToken)
+    {
+        using HttpClient cookieless = createClient(false);
+        using var request = new HttpRequestMessage(HttpMethod.Post, Route(RouteConsts.Auth.RefreshSession));
+        request.Headers.Add("Cookie", $"{RefreshTokenCookie.Name}={refreshToken}");
+
+        return await cookieless.SendAsync(request);
+    }
+
+    public Task<HttpResponseMessage> LogoutAsync() =>
+        PostAsync(RouteConsts.Auth.Logout, body: null, accessToken: null, deviceId: null);
+
+    public Task<HttpResponseMessage> LogoutAllAsync(string accessToken) =>
+        PostAsync(RouteConsts.Auth.LogoutAllDevices, body: null, accessToken, deviceId: null);
+
+    public async Task<HttpResponseMessage> GetMeAsync(string? accessToken)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, Route(RouteConsts.Auth.Me));
+
+        if (accessToken is not null)
+        {
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        }
+
+        return await _http.SendAsync(request);
+    }
+
+    public static async Task<AuthSessionResponse> ReadSessionAsync(HttpResponseMessage response)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+
+        return await response.Content.ReadFromJsonAsync<AuthSessionResponse>(TestContext.Current.CancellationToken)
+            ?? throw new InvalidOperationException("The response has no session body.");
+    }
+
+    /// <summary>Parses the <c>Set-Cookie</c> header for <c>liftingo_rt</c>, or returns <c>null</c> when there is none.</summary>
+    public static RefreshCookie? ReadRefreshCookie(HttpResponseMessage response)
+    {
+        ArgumentNullException.ThrowIfNull(response);
+
+        if (!response.Headers.TryGetValues("Set-Cookie", out IEnumerable<string>? values))
+        {
+            return null;
+        }
+
+        string prefix = RefreshTokenCookie.Name + "=";
+        string? header = values.FirstOrDefault(v => v.StartsWith(prefix, StringComparison.Ordinal));
+
+        if (header is null)
+        {
+            return null;
+        }
+
+        string[] parts = header.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        var attributes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (string part in parts.Skip(1))
+        {
+            int separator = part.IndexOf('=', StringComparison.Ordinal);
+
+            if (separator < 0)
+            {
+                attributes[part] = string.Empty;
+            }
+            else
+            {
+                attributes[part[..separator]] = part[(separator + 1)..];
+            }
+        }
+
+        return new RefreshCookie(parts[0][prefix.Length..], attributes);
+    }
+
+    /// <summary>Pulls the <c>token</c> query value out of the link in an e-mail's text body.</summary>
+    public static string ExtractToken(EmailMessage message)
+    {
+        ArgumentNullException.ThrowIfNull(message);
+
+        Match match = TokenInLink().Match(message.TextBody);
+
+        return match.Success
+            ? Uri.UnescapeDataString(match.Groups["token"].Value)
+            : throw new InvalidOperationException($"No token link in the {message.TemplateName} e-mail.");
+    }
+
+    public void Dispose() => _http.Dispose();
+
+    private async Task<HttpResponseMessage> PostAsync(string authRoute, object? body, string? accessToken, Guid? deviceId)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, Route(authRoute));
+
+        if (body is not null)
+        {
+            request.Content = JsonContent.Create(body);
+        }
+
+        if (accessToken is not null)
+        {
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        }
+
+        if (deviceId is { } id)
+        {
+            request.Headers.Add(ClientInfo.DeviceIdHeader, id.ToString());
+        }
+
+        return await _http.SendAsync(request);
+    }
+
+    [GeneratedRegex(@"[?&]token=(?<token>[^\s&""]+)")]
+    private static partial Regex TokenInLink();
+}
