@@ -2,6 +2,8 @@ using Liftingo.Application.Common.Result;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 
 namespace Liftingo.Api.UnitTests.Common.Result;
 
@@ -13,6 +15,7 @@ public class ResultExtensionsTests
     [InlineData(ErrorType.Validation, StatusCodes.Status400BadRequest)]
     [InlineData(ErrorType.Conflict, StatusCodes.Status409Conflict)]
     [InlineData(ErrorType.Unauthorized, StatusCodes.Status401Unauthorized)]
+    [InlineData(ErrorType.TooManyRequests, StatusCodes.Status429TooManyRequests)]
     public void ToProblem_FailureOfEachErrorType_MapsToExpectedStatusCode(ErrorType type, int expectedStatusCode)
     {
         Application.Common.Result.Result result = Application.Common.Result.Result.Failure(
@@ -29,6 +32,7 @@ public class ResultExtensionsTests
     [InlineData(ErrorType.NotFound)]
     [InlineData(ErrorType.Conflict)]
     [InlineData(ErrorType.Unauthorized)]
+    [InlineData(ErrorType.TooManyRequests)]
     public void ToProblem_NonValidationFailure_ExposesCodeAndDescriptionAsDetail(ErrorType type)
     {
         Application.Common.Result.Result result = Application.Common.Result.Result.Failure(
@@ -64,10 +68,67 @@ public class ResultExtensionsTests
     }
 
     [Fact]
+    public void ToProblem_LockedOutError_Returns429WithRetryAfterExtension()
+    {
+        var retryAfter = new DateTimeOffset(2026, 10, 1, 12, 15, 0, TimeSpan.Zero);
+
+        RetryAfterProblemResult problem = Assert.IsType<RetryAfterProblemResult>(
+            Application.Common.Result.Result.Failure(new LockedOutError(retryAfter)).ToProblem());
+
+        Assert.Equal(StatusCodes.Status429TooManyRequests, problem.StatusCode);
+        Assert.Equal(LockedOutError.ErrorCode, problem.Problem.ProblemDetails.Extensions[ResultExtensions.CodeExtension]);
+        Assert.Equal("2026-10-01T12:15:00.0000000+00:00", problem.Problem.ProblemDetails.Extensions[ResultExtensions.RetryAfterExtension]);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_LockedOutError_SendsRetryAfterHeaderInSecondsFromRequestTimeProvider()
+    {
+        var time = new FakeTimeProvider(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
+        IResult problem = Application.Common.Result.Result
+            .Failure(new LockedOutError(time.GetUtcNow().AddMinutes(15).AddMilliseconds(200)))
+            .ToProblem();
+        DefaultHttpContext httpContext = CreateHttpContext(time);
+
+        await problem.ExecuteAsync(httpContext);
+
+        Assert.Equal(StatusCodes.Status429TooManyRequests, httpContext.Response.StatusCode);
+        Assert.Equal("901", httpContext.Response.Headers.RetryAfter.ToString());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_RetryAfterInThePast_SendsZeroSeconds()
+    {
+        var time = new FakeTimeProvider(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
+        IResult problem = Application.Common.Result.Result
+            .Failure(new LockedOutError(time.GetUtcNow().AddMinutes(-1)))
+            .ToProblem();
+        DefaultHttpContext httpContext = CreateHttpContext(time);
+
+        await problem.ExecuteAsync(httpContext);
+
+        Assert.Equal("0", httpContext.Response.Headers.RetryAfter.ToString());
+    }
+
+    [Fact]
     public void ToProblem_SuccessfulResult_Throws()
     {
         Application.Common.Result.Result result = Application.Common.Result.Result.Success();
 
         Assert.Throws<InvalidOperationException>(() => result.ToProblem());
+    }
+
+    private static DefaultHttpContext CreateHttpContext(TimeProvider time)
+    {
+        ServiceProvider services = new ServiceCollection()
+            .AddSingleton(time)
+            .AddLogging()
+            .AddProblemDetails()
+            .BuildServiceProvider();
+
+        return new DefaultHttpContext
+        {
+            RequestServices = services,
+            Response = { Body = new MemoryStream() },
+        };
     }
 }

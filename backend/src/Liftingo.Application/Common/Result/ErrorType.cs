@@ -7,4 +7,5 @@ public enum ErrorType
     Validation,
     Conflict,
     Unauthorized,
+    TooManyRequests,
 }

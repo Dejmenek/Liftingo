@@ -292,3 +292,7 @@ dotnet_naming_style.begins_with_i.required_prefix = I
 dotnet_naming_style.begins_with_i.required_suffix = 
 dotnet_naming_style.begins_with_i.word_separator = 
 dotnet_naming_style.begins_with_i.capitalization = pascal_case
+
+# EF Core generated migrations: the scaffolder emits constant array arguments
+[**/Persistence/Migrations/*.cs]
+dotnet_diagnostic.CA1861.severity = none
