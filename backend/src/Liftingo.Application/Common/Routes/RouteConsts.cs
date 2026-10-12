@@ -4,8 +4,6 @@ namespace Liftingo.Application.Common.Routes;
 
 public static class RouteConsts
 {
-    public const string Ping = "/ping";
-
     [SuppressMessage("Design", "CA1034:Nested types should not be visible", Justification = "Routes are grouped per module under RouteConsts, e.g. RouteConsts.Auth.Login.")]
     public static class Auth
     {

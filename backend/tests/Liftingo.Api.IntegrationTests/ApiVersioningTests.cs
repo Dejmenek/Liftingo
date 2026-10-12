@@ -1,4 +1,5 @@
 using Liftingo.Api.IntegrationTests.Infrastructure;
+using Liftingo.Application.Features.Account.Shared;
 
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -10,28 +11,32 @@ using System.Text.Json;
 
 namespace Liftingo.Api.IntegrationTests;
 
+// The routing tests use GET /auth/me without a bearer: a route that exists answers 401, not 404.
 public class ApiVersioningTests(SqlServerFixture fixture) : IntegrationTestBase(fixture)
 {
     private const string ProblemJson = "application/problem+json";
 
     [Fact]
-    public async Task Ping_V1Route_ReturnsOk()
+    public async Task Me_V1RouteWithoutBearer_ReturnsUnauthorizedNotNotFound()
     {
-        using HttpClient client = Factory.CreateClient();
+        using HttpClient client = Factory.CreateApiClient();
 
-        using HttpResponseMessage response = await client.GetAsync(new Uri("/api/v1/ping", UriKind.Relative), TestContext.Current.CancellationToken);
+        using HttpResponseMessage response = await client.GetAsync(new Uri("/api/v1/auth/me", UriKind.Relative), TestContext.Current.CancellationToken);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        JsonElement body = await response.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
-        Assert.Equal("ok", body.GetProperty("status").GetString());
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Fact]
-    public async Task Ping_V1Route_ReportsSupportedVersions()
+    public async Task Me_V1RouteWithBearer_ReportsSupportedVersions()
     {
-        using HttpClient client = Factory.CreateClient();
+        // The versions are reported by the endpoint itself, so the answer must come from the endpoint:
+        // an anonymous call is stopped by the authorization middleware before it gets there.
+        using AuthTestClient client = Factory.CreateAuthClient();
+        (HttpResponseMessage registered, _) = await client.RegisterAsync();
+        using HttpResponseMessage registeredResponse = registered;
+        AuthSessionResponse session = await AuthTestClient.ReadSessionAsync(registeredResponse);
 
-        using HttpResponseMessage response = await client.GetAsync(new Uri("/api/v1/ping", UriKind.Relative), TestContext.Current.CancellationToken);
+        using HttpResponseMessage response = await client.GetMeAsync(session.AccessToken);
 
         Assert.True(response.Headers.TryGetValues("api-supported-versions", out IEnumerable<string>? supported));
         Assert.Equal("1.0", supported.Single());
@@ -47,15 +52,15 @@ public class ApiVersioningTests(SqlServerFixture fixture) : IntegrationTestBase(
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         JsonElement document = await response.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
-        Assert.True(document.GetProperty("paths").TryGetProperty("/api/v1/ping", out _));
+        Assert.True(document.GetProperty("paths").TryGetProperty("/api/v1/auth/me", out _));
     }
 
     [Fact]
-    public async Task Ping_UnversionedRoute_IsNotFound()
+    public async Task Me_UnversionedRoute_IsNotFound()
     {
-        using HttpClient client = Factory.CreateClient();
+        using HttpClient client = Factory.CreateApiClient();
 
-        using HttpResponseMessage response = await client.GetAsync(new Uri("/ping", UriKind.Relative), TestContext.Current.CancellationToken);
+        using HttpResponseMessage response = await client.GetAsync(new Uri("/auth/me", UriKind.Relative), TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -63,9 +68,9 @@ public class ApiVersioningTests(SqlServerFixture fixture) : IntegrationTestBase(
     [Fact]
     public async Task Request_UnknownVersion_ReturnsProblemDetailsInsteadOfServerError()
     {
-        using HttpClient client = Factory.CreateClient();
+        using HttpClient client = Factory.CreateApiClient();
 
-        using HttpResponseMessage response = await client.GetAsync(new Uri("/api/v99/ping", UriKind.Relative), TestContext.Current.CancellationToken);
+        using HttpResponseMessage response = await client.GetAsync(new Uri("/api/v99/auth/me", UriKind.Relative), TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.Equal(ProblemJson, response.Content.Headers.ContentType?.MediaType);
