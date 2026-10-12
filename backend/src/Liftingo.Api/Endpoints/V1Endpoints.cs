@@ -21,6 +21,8 @@ internal static class V1Endpoints
         LogoutAllDevices.Map(v1);
         VerifyEmail.Map(v1);
         ResendVerificationEmail.Map(v1);
+        ForgotPassword.Map(v1);
+        ResetPassword.Map(v1);
 
         return v1;
     }
