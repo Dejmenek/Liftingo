@@ -23,6 +23,17 @@
     <PackageReference Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" />
     <PackageReference Include="AspNet.Security.OAuth.Twitter" />
     <PackageReference Include="StackExchange.Redis" />
+    <PackageReference Include="Serilog" />
+    <PackageReference Include="Serilog.Sinks.Console" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Sessions\Scripts\*.lua" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Liftingo.Api.UnitTests" />
+    <InternalsVisibleTo Include="Liftingo.Api.IntegrationTests" />
   </ItemGroup>
 
   <ItemGroup>
