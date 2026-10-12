@@ -1,6 +1,6 @@
 using Asp.Versioning;
 
-using Liftingo.Application.Features.Common;
+using Liftingo.Application.Features.Account;
 
 namespace Liftingo.Api.Endpoints;
 
@@ -13,7 +13,8 @@ internal static class V1Endpoints
 
     public static RouteGroupBuilder MapV1Endpoints(this RouteGroupBuilder v1)
     {
-        Ping.Map(v1);
+        Register.Map(v1);
+        GetCurrentAccount.Map(v1);
 
         return v1;
     }
