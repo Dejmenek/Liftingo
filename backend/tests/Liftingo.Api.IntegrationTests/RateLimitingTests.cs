@@ -1,4 +1,5 @@
 using Liftingo.Api.IntegrationTests.Infrastructure;
+using Liftingo.Application.Features.Account.Shared;
 
 using Serilog.Events;
 
@@ -129,6 +130,35 @@ public class RateLimitingTests(SqlServerFixture fixture) : IntegrationTestBase(f
         Assert.DoesNotContain(factory.Logs.Events, e =>
             e.RenderMessage(CultureInfo.InvariantCulture).Contains(clientIp, StringComparison.Ordinal)
             || e.Properties.Values.Any(v => v.ToString().Contains(clientIp, StringComparison.Ordinal)));
+    }
+
+    [Fact]
+    public async Task Request_SignedInAuthCall_FallsIntoThePerUserBucketNotTheAnonymousOne()
+    {
+        using ApiFactory factory = CreateLimitedFactory();
+        using AuthTestClient client = factory.CreateAuthClient();
+
+        // The registration is anonymous: it takes one of the three anonymous tokens of the shared bucket.
+        (HttpResponseMessage registered, _) = await client.RegisterAsync();
+        using HttpResponseMessage registeredResponse = registered;
+        Assert.Equal(HttpStatusCode.Created, registeredResponse.StatusCode);
+        AuthSessionResponse session = await AuthTestClient.ReadSessionAsync(registeredResponse);
+
+        // Five signed-in calls succeed. In the anonymous bucket only two tokens were left, so these use the user's own.
+        for (int call = 1; call <= AuthenticatedLimit; call++)
+        {
+            using HttpResponseMessage me = await client.GetMeAsync(session.AccessToken);
+            Assert.Equal(HttpStatusCode.OK, me.StatusCode);
+        }
+
+        using HttpResponseMessage exhausted = await client.GetMeAsync(session.AccessToken);
+        Assert.Equal(HttpStatusCode.TooManyRequests, exhausted.StatusCode);
+        JsonElement body = await exhausted.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
+        Assert.Equal("RateLimit.Exceeded", body.GetProperty("code").GetString());
+
+        // The anonymous bucket of the same address is untouched by the signed-in calls.
+        using HttpResponseMessage anonymous = await client.GetMeAsync(accessToken: null);
+        Assert.Equal(HttpStatusCode.Unauthorized, anonymous.StatusCode);
     }
 
     private ApiFactory CreateLimitedFactory() =>
