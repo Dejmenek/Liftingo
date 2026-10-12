@@ -65,4 +65,7 @@ X-Device-Id: {{DeviceId}}
   "password": "Zle-haslo1!"
 }
 
+### Refresh: needs the liftingo_rt cookie from login or register (200 + rotated cookie, or 401 Auth.SessionInvalid)
+POST {{Liftingo.Api_HostAddress}}/api/v1/auth/session/refresh
+
 ###
