@@ -26,21 +26,13 @@ public sealed record RegisterRequest(
 
 public sealed class RegisterValidator : AbstractValidator<RegisterRequest>
 {
-    public const int PasswordMaxLength = 128;
-
     public RegisterValidator()
     {
         // The other password rules (length, digit, special character) belong to Identity and are reported by
         // IIdentityService.CreateUserAsync with their own codes.
         RuleFor(r => r.Email).MustBeValidEmail();
 
-        RuleFor(r => r.Password)
-            .Must(password => !string.IsNullOrEmpty(password))
-            .WithErrorCode("Validation.PasswordRequired")
-            .WithMessage("Podaj hasło.")
-            .Must(password => password is null || password.Length <= PasswordMaxLength)
-            .WithErrorCode("Validation.PasswordTooLong")
-            .WithMessage($"Hasło może mieć najwyżej {PasswordMaxLength} znaków.");
+        RuleFor(r => r.Password).MustBeAcceptablePassword();
 
         RuleFor(r => r.AcceptTermsAndAge).MustAcceptTermsAndAge();
         RuleFor(r => r.AcceptHealthData).MustAcceptHealthData();
