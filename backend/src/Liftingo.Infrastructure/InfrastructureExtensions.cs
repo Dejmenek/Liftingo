@@ -164,6 +164,19 @@ public static class InfrastructureExtensions
                 identityOptions.Lockout.DefaultLockoutTimeSpan = security.Lockout.Duration;
             });
 
+        // The same lockout values for e-mails without an account (FailedLoginThrottle in Application), so the
+        // answer for an unknown address matches a real one.
+        services.AddSingleton<IOptions<LoginLockoutOptions>>(provider =>
+        {
+            LockoutPolicyOptions lockout = provider.GetRequiredService<IOptions<IdentitySecurityOptions>>().Value.Lockout;
+
+            return Options.Create(new LoginLockoutOptions
+            {
+                MaxFailedAccessAttempts = lockout.MaxFailedAccessAttempts,
+                Duration = lockout.Duration,
+            });
+        });
+
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddSingleton<IAccessTokenIssuer, JwtAccessTokenIssuer>();
     }

@@ -61,6 +61,18 @@ public sealed class LegalOptions
     public string DocumentsVersion { get; init; } = string.Empty;
 }
 
+/// <summary>
+/// The failed-login lockout rules that <see cref="FailedLoginThrottle"/> applies to e-mails without an account.
+/// They are the values Identity uses for real accounts: Infrastructure fills them from <c>Identity:Lockout</c>,
+/// so both paths always agree.
+/// </summary>
+public sealed class LoginLockoutOptions
+{
+    public int MaxFailedAccessAttempts { get; init; }
+
+    public TimeSpan Duration { get; init; }
+}
+
 public sealed class AppOptions
 {
     public const string SectionName = "App";
