@@ -1,6 +1,7 @@
 using Asp.Versioning;
 
 using Liftingo.Api.Extensions;
+using Liftingo.Application;
 using Liftingo.Infrastructure;
 
 using Serilog;
@@ -22,6 +23,8 @@ try
     builder.Services.AddRateLimiting(builder.Configuration);
 
     builder.Services.AddRequestTimeoutPolicies(builder.Configuration);
+
+    builder.Services.AddApplication();
 
     builder.Services.AddInfrastructure(builder.Configuration, builder.Environment);
 
