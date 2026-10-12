@@ -20,6 +20,7 @@ public sealed partial class AccountEmails(
     ILogger<AccountEmails> logger)
 {
     public const string VerificationAndWelcomeTemplate = "VerificationAndWelcome";
+    public const string VerificationTemplate = "Verification";
 
     /// <summary>Verification link doubling as the welcome e-mail (FR-025).</summary>
     public async Task SendVerificationAndWelcomeAsync(Guid userId, string email, string token, CancellationToken ct)
@@ -42,6 +43,27 @@ public sealed partial class AccountEmails(
 
         await SendSafelyAsync(new EmailMessage(email, subject, html, text, VerificationAndWelcomeTemplate, userId), ct);
     }
+
+    /// <summary>Verification link without the welcome text, for a resend (FR-018).</summary>
+    public async Task SendVerificationAsync(Guid userId, string email, string token, CancellationToken ct)
+    {
+        string link = Link("auth/verify-email", token);
+
+        const string subject = "Potwierdź swój adres e-mail w Liftingo";
+
+        string text =
+            "Aby potwierdzić adres e-mail, otwórz poniższy link (ważny 24 godziny):\n" +
+            $"{link}\n\n" +
+            "Jeśli to nie Ty prosiłeś(-aś) o potwierdzenie, zignoruj tę wiadomość.";
+
+        string html =
+            "<p>Aby potwierdzić adres e-mail, kliknij poniższy link (ważny 24 godziny):</p>" +
+            $"<p><a href=\"{WebUtility.HtmlEncode(link)}\">Potwierdź adres e-mail</a></p>" +
+            "<p>Jeśli to nie Ty prosiłeś(-aś) o potwierdzenie, zignoruj tę wiadomość.</p>";
+
+        await SendSafelyAsync(new EmailMessage(email, subject, html, text, VerificationTemplate, userId), ct);
+    }
+
 
     private string Link(string path, string token)
     {

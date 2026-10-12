@@ -92,6 +92,10 @@ public sealed partial class AuthTestClient(Func<bool, HttpClient> createClient) 
         return await cookieless.SendAsync(request);
     }
 
+    /// <summary>POSTs a JSON body (or none) to an auth route, optionally with a bearer token, using this client's cookies.</summary>
+    public Task<HttpResponseMessage> PostJsonAsync(string authRoute, object? body, string? accessToken = null) =>
+        PostAsync(authRoute, body, accessToken, deviceId: null);
+
     public Task<HttpResponseMessage> LogoutAsync() =>
         PostAsync(RouteConsts.Auth.Logout, body: null, accessToken: null, deviceId: null);
 
