@@ -20,6 +20,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Liftingo.Api.UnitTests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Liftingo.Application\Liftingo.Application.csproj" />
     <ProjectReference Include="..\Liftingo.Infrastructure\Liftingo.Infrastructure.csproj" />
   </ItemGroup>
