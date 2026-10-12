@@ -2,6 +2,7 @@ using Liftingo.Infrastructure.Persistence;
 
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 
 namespace Liftingo.Infrastructure.Identity;
 
@@ -15,5 +16,20 @@ public sealed class LiftingoUserStore : UserStore<ApplicationUser, IdentityRole<
         : base(context, describer)
     {
         AutoSaveChanges = false;
+    }
+
+    public override Task<IdentityResult> UpdateAsync(ApplicationUser user, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+
+        // UserManager calls UpdateAsync after most changes (AddLoginAsync, ...). The base implementation calls
+        // DbContext.Update, which would turn a user that was staged earlier in the same unit of work from Added
+        // into Modified, and the INSERT would become an UPDATE of a row that does not exist.
+        if (Context.Entry(user).State == EntityState.Added)
+        {
+            return Task.FromResult(IdentityResult.Success);
+        }
+
+        return base.UpdateAsync(user, cancellationToken);
     }
 }
