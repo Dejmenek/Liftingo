@@ -288,6 +288,12 @@ dotnet_diagnostic.CA1724.severity = none  # Result/Error living in a "Result" na
 dotnet_diagnostic.CA1000.severity = none  # static factories on Result<TValue> are the point of the pattern
 dotnet_diagnostic.CA2225.severity = none  # implicit conversions are the point; Success/Failure are the named alternates
 
+# Closed result hierarchies (RotationResult, PasswordCheckResult): the cases are nested in the abstract
+# record on purpose. Its private constructor stops anything else from deriving, and callers read the
+# cases as RotationResult.Rotated, PasswordCheckResult.Failed, and so on.
+[**/Common/Security/{RotationResult,PasswordCheckResult}.cs]
+dotnet_diagnostic.CA1034.severity = none
+
 dotnet_naming_style.begins_with_i.required_prefix = I
 dotnet_naming_style.begins_with_i.required_suffix = 
 dotnet_naming_style.begins_with_i.word_separator = 
