@@ -116,4 +116,44 @@ Content-Type: application/json
   "acceptMarketing": false
 }
 
+### External providers: the configured ones (200 {"providers":["google","facebook"]})
+GET {{Liftingo.Api_HostAddress}}/api/v1/auth/external/providers
+
+### External sign-in, start: a browser navigation, not an XHR. Open this URL in the browser (302 to the provider,
+### 404 Auth.ProviderUnavailable when it is not configured; provider is google, facebook or x):
+### {{Liftingo.Api_HostAddress}}/api/v1/auth/external/google/start?deviceId=3f2c1b8e-6d1a-4c52-9a0e-1d2f3a4b5c6d
+### The provider then returns to /signin-google (/signin-facebook, /signin-x), and the API redirects to
+### /api/v1/auth/external/callback and from there to the frontend.
+
+### External sign-in, pending: needs the Liftingo.External cookie from the browser flow (200, or 400 Auth.ExternalLoginExpired)
+GET {{Liftingo.Api_HostAddress}}/api/v1/auth/external/pending
+
+### External sign-in, complete: consents (and an e-mail when emailRequired). 201 new account, 200 takeover of an unverified account,
+### 202 {"status":"linkConfirmationSent"} when the typed e-mail already has an account
+POST {{Liftingo.Api_HostAddress}}/api/v1/auth/external/complete
+Content-Type: application/json
+X-Device-Id: {{DeviceId}}
+
+{
+  "acceptTermsAndAge": true,
+  "acceptHealthData": true,
+  "acceptMarketing": false,
+  "email": null
+}
+
+### External sign-in, cancel: drops the external cookie (204)
+POST {{Liftingo.Api_HostAddress}}/api/v1/auth/external/cancel
+
+### Confirm a provider link: token from the link-confirmation e-mail (200 + session, 400 Auth.ProviderLinkInvalid / Auth.ConsentRequired, 409 Auth.ProviderAlreadyLinked, 429 Auth.LockedOut)
+POST {{Liftingo.Api_HostAddress}}/api/v1/auth/external/confirm-link
+Content-Type: application/json
+X-Device-Id: {{DeviceId}}
+
+{
+  "token": "paste-the-token-from-the-email",
+  "acceptTermsAndAge": null,
+  "acceptHealthData": null,
+  "acceptMarketing": null
+}
+
 ###
