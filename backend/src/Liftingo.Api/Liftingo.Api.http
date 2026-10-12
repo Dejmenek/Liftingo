@@ -1,5 +1,16 @@
 @Liftingo.Api_HostAddress = https://localhost:7056
 @DeviceId = 3f2c1b8e-6d1a-4c52-9a0e-1d2f3a4b5c6d
+# A second "device": use it to trigger the new-device e-mail
+@DeviceId2 = 9b7e4a10-52c3-4d8f-8a61-0c4e7f2d9a33
+@Email = anna@example.pl
+@Password = Sztanga1!
+@NewPassword = Nowe1haslo!
+# Paste from the register/login response body
+@AccessToken =
+# Paste the token query value from the e-mail links printed in the console (Liftingo.DevEmail)
+@VerificationToken =
+@ResetToken =
+@LinkToken =
 
 ### Register: valid
 POST {{Liftingo.Api_HostAddress}}/api/v1/auth/register
@@ -7,8 +18,8 @@ Content-Type: application/json
 X-Device-Id: {{DeviceId}}
 
 {
-  "email": "anna@example.pl",
-  "password": "Sztanga1!",
+  "email": "{{Email}}",
+  "password": "{{Password}}",
   "acceptTermsAndAge": true,
   "acceptHealthData": true,
   "acceptMarketing": false
@@ -45,14 +56,24 @@ GET {{Liftingo.Api_HostAddress}}/api/v1/auth/me
 Authorization: Bearer {{AccessToken}}
 Accept: application/json
 
-### Login: valid (200 + liftingo_rt cookie). A new X-Device-Id sends the new-device e-mail once US7 is built
+### Login: valid (200 + liftingo_rt cookie). A new X-Device-Id sends the new-device e-mail
 POST {{Liftingo.Api_HostAddress}}/api/v1/auth/login
 Content-Type: application/json
 X-Device-Id: {{DeviceId}}
 
 {
-  "email": "anna@example.pl",
-  "password": "Sztanga1!"
+  "email": "{{Email}}",
+  "password": "{{Password}}"
+}
+
+### Login: from a second device (200 + a new-device e-mail in the console)
+POST {{Liftingo.Api_HostAddress}}/api/v1/auth/login
+Content-Type: application/json
+X-Device-Id: {{DeviceId2}}
+
+{
+  "email": "{{Email}}",
+  "password": "{{Password}}"
 }
 
 ### Login: wrong password (401 Auth.InvalidCredentials; the 5th wrong attempt gives 429 Auth.LockedOut with retryAfter)
@@ -61,7 +82,7 @@ Content-Type: application/json
 X-Device-Id: {{DeviceId}}
 
 {
-  "email": "anna@example.pl",
+  "email": "{{Email}}",
   "password": "Zle-haslo1!"
 }
 
@@ -80,7 +101,7 @@ POST {{Liftingo.Api_HostAddress}}/api/v1/auth/email/verify
 Content-Type: application/json
 
 {
-  "token": "paste-the-token-from-the-email"
+  "token": "{{VerificationToken}}"
 }
 
 ### Resend the verification e-mail (202 always; nothing is sent when verified or at 3 per hour)
@@ -92,7 +113,7 @@ POST {{Liftingo.Api_HostAddress}}/api/v1/auth/password/forgot
 Content-Type: application/json
 
 {
-  "email": "anna@example.pl"
+  "email": "{{Email}}"
 }
 
 ### Reset password: verified account (204, no session; every session is revoked)
@@ -100,8 +121,8 @@ POST {{Liftingo.Api_HostAddress}}/api/v1/auth/password/reset
 Content-Type: application/json
 
 {
-  "token": "paste-the-token-from-the-email",
-  "newPassword": "Nowe1haslo!"
+  "token": "{{ResetToken}}",
+  "newPassword": "{{NewPassword}}"
 }
 
 ### Reset password: unverified account, consent variant (400 Auth.ConsentRequired without both required consents)
@@ -109,8 +130,8 @@ POST {{Liftingo.Api_HostAddress}}/api/v1/auth/password/reset
 Content-Type: application/json
 
 {
-  "token": "paste-the-token-from-the-email",
-  "newPassword": "Nowe1haslo!",
+  "token": "{{ResetToken}}",
+  "newPassword": "{{NewPassword}}",
   "acceptTermsAndAge": true,
   "acceptHealthData": true,
   "acceptMarketing": false
@@ -150,7 +171,7 @@ Content-Type: application/json
 X-Device-Id: {{DeviceId}}
 
 {
-  "token": "paste-the-token-from-the-email",
+  "token": "{{LinkToken}}",
   "acceptTermsAndAge": null,
   "acceptHealthData": null,
   "acceptMarketing": null
