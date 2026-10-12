@@ -21,6 +21,7 @@ public sealed partial class AccountEmails(
 {
     public const string VerificationAndWelcomeTemplate = "VerificationAndWelcome";
     public const string VerificationTemplate = "Verification";
+    public const string PasswordResetTemplate = "PasswordReset";
 
     /// <summary>Verification link doubling as the welcome e-mail (FR-025).</summary>
     public async Task SendVerificationAndWelcomeAsync(Guid userId, string email, string token, CancellationToken ct)
@@ -64,6 +65,27 @@ public sealed partial class AccountEmails(
         await SendSafelyAsync(new EmailMessage(email, subject, html, text, VerificationTemplate, userId), ct);
     }
 
+    /// <summary>Password reset link, valid one hour (FR-032).</summary>
+    public async Task SendPasswordResetAsync(Guid userId, string email, string token, CancellationToken ct)
+    {
+        string link = Link("auth/reset-password", token);
+
+        const string subject = "Reset hasła w Liftingo";
+
+        string text =
+            "Otrzymaliśmy prośbę o zresetowanie hasła do Twojego konta w Liftingo.\n\n" +
+            "Aby ustawić nowe hasło, otwórz poniższy link (ważny 1 godzinę):\n" +
+            $"{link}\n\n" +
+            "Jeśli to nie Ty prosiłeś(-aś) o reset hasła, zignoruj tę wiadomość. Twoje hasło pozostanie bez zmian.";
+
+        string html =
+            "<p>Otrzymaliśmy prośbę o zresetowanie hasła do Twojego konta w Liftingo.</p>" +
+            "<p>Aby ustawić nowe hasło, kliknij poniższy link (ważny 1 godzinę):</p>" +
+            $"<p><a href=\"{WebUtility.HtmlEncode(link)}\">Ustaw nowe hasło</a></p>" +
+            "<p>Jeśli to nie Ty prosiłeś(-aś) o reset hasła, zignoruj tę wiadomość. Twoje hasło pozostanie bez zmian.</p>";
+
+        await SendSafelyAsync(new EmailMessage(email, subject, html, text, PasswordResetTemplate, userId), ct);
+    }
 
     private string Link(string path, string token)
     {

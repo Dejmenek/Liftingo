@@ -87,4 +87,33 @@ Content-Type: application/json
 POST {{Liftingo.Api_HostAddress}}/api/v1/auth/email/resend-verification
 Authorization: Bearer {{AccessToken}}
 
+### Forgot password (202 with an empty body, whether or not the e-mail is registered)
+POST {{Liftingo.Api_HostAddress}}/api/v1/auth/password/forgot
+Content-Type: application/json
+
+{
+  "email": "anna@example.pl"
+}
+
+### Reset password: verified account (204, no session; every session is revoked)
+POST {{Liftingo.Api_HostAddress}}/api/v1/auth/password/reset
+Content-Type: application/json
+
+{
+  "token": "paste-the-token-from-the-email",
+  "newPassword": "Nowe1haslo!"
+}
+
+### Reset password: unverified account, consent variant (400 Auth.ConsentRequired without both required consents)
+POST {{Liftingo.Api_HostAddress}}/api/v1/auth/password/reset
+Content-Type: application/json
+
+{
+  "token": "paste-the-token-from-the-email",
+  "newPassword": "Nowe1haslo!",
+  "acceptTermsAndAge": true,
+  "acceptHealthData": true,
+  "acceptMarketing": false
+}
+
 ###
