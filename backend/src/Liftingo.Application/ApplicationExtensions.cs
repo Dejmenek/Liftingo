@@ -19,6 +19,9 @@ public static class ApplicationExtensions
         services.AddScoped<ConsentRecorder>();
         services.AddScoped<AccountTakeover>();
 
+        // In-memory state for e-mails without an account, so it must outlive a request.
+        services.AddSingleton<FailedLoginThrottle>();
+
         return services;
     }
 }
