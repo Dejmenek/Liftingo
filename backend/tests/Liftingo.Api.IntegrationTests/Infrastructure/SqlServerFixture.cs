@@ -84,6 +84,11 @@ public sealed class SqlServerFixture : IAsyncLifetime
         }
     }
 
+    /// <summary>Freezes the Redis container: connections stay open but nothing answers (a store outage).</summary>
+    public Task PauseRedisAsync() => _redisContainer.PauseAsync();
+
+    public Task UnpauseRedisAsync() => _redisContainer.UnpauseAsync();
+
     public async ValueTask DisposeAsync()
     {
         if (Factory is not null)
