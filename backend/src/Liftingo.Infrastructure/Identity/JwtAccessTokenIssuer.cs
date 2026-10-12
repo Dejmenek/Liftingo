@@ -25,6 +25,7 @@ public sealed class JwtAccessTokenIssuer(IOptions<JwtOptions> options, TimeProvi
             Issuer = jwt.Issuer,
             Audience = jwt.Audience,
             IssuedAt = now.UtcDateTime,
+            NotBefore = now.UtcDateTime,
             Expires = expiresAt.UtcDateTime,
             SigningCredentials = _credentials,
             Claims = new Dictionary<string, object>
