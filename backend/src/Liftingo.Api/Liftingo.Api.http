@@ -68,4 +68,11 @@ X-Device-Id: {{DeviceId}}
 ### Refresh: needs the liftingo_rt cookie from login or register (200 + rotated cookie, or 401 Auth.SessionInvalid)
 POST {{Liftingo.Api_HostAddress}}/api/v1/auth/session/refresh
 
+### Logout this device: only the cookie is needed (204, always)
+POST {{Liftingo.Api_HostAddress}}/api/v1/auth/session/logout
+
+### Logout everywhere: signs out every device, including this one (204)
+POST {{Liftingo.Api_HostAddress}}/api/v1/auth/session/logout-all
+Authorization: Bearer {{AccessToken}}
+
 ###

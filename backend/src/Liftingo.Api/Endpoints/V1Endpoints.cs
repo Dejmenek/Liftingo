@@ -17,6 +17,8 @@ internal static class V1Endpoints
         GetCurrentAccount.Map(v1);
         Login.Map(v1);
         RefreshSession.Map(v1);
+        Logout.Map(v1);
+        LogoutAllDevices.Map(v1);
 
         return v1;
     }
