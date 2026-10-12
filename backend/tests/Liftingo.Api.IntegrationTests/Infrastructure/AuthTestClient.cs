@@ -46,7 +46,8 @@ public sealed partial class AuthTestClient(Func<bool, HttpClient> createClient) 
     public async Task<(HttpResponseMessage Response, RegisterRequestBody Request)> RegisterAsync(
         string? email = null,
         string? password = null,
-        Guid? deviceId = null)
+        Guid? deviceId = null,
+        string? clientIp = null)
     {
         RegisterRequestBody generated = new RegisterRequestFaker().Generate();
         RegisterRequestBody request = generated with
@@ -55,7 +56,7 @@ public sealed partial class AuthTestClient(Func<bool, HttpClient> createClient) 
             Password = password ?? generated.Password,
         };
 
-        return (await PostAsync(RouteConsts.Auth.Register, request, accessToken: null, deviceId), request);
+        return (await PostAsync(RouteConsts.Auth.Register, request, accessToken: null, deviceId, clientIp), request);
     }
 
     public Task<HttpResponseMessage> RegisterAsync(RegisterRequestBody request, Guid? deviceId = null) =>
@@ -72,35 +73,40 @@ public sealed partial class AuthTestClient(Func<bool, HttpClient> createClient) 
         PostAsync(RouteConsts.Auth.Login, new { email, password }, accessToken: null, deviceId, clientIp, userAgent);
 
     /// <summary>Calls refresh with this client's own cookie.</summary>
-    public Task<HttpResponseMessage> RefreshAsync() =>
-        PostAsync(RouteConsts.Auth.RefreshSession, body: null, accessToken: null, deviceId: null);
+    public Task<HttpResponseMessage> RefreshAsync(string? clientIp = null) =>
+        PostAsync(RouteConsts.Auth.RefreshSession, body: null, accessToken: null, deviceId: null, clientIp);
 
     /// <summary>Calls refresh with an explicit cookie value (e.g. a replayed one), ignoring this client's cookies.</summary>
-    public Task<HttpResponseMessage> RefreshWithCookieAsync(string refreshToken) =>
-        PostWithCookieAsync(RouteConsts.Auth.RefreshSession, refreshToken);
+    public Task<HttpResponseMessage> RefreshWithCookieAsync(string refreshToken, string? clientIp = null) =>
+        PostWithCookieAsync(RouteConsts.Auth.RefreshSession, refreshToken, clientIp);
 
     /// <summary>Calls logout with an explicit cookie value, ignoring this client's cookies.</summary>
     public Task<HttpResponseMessage> LogoutWithCookieAsync(string refreshToken) =>
         PostWithCookieAsync(RouteConsts.Auth.Logout, refreshToken);
 
-    private async Task<HttpResponseMessage> PostWithCookieAsync(string authRoute, string refreshToken)
+    private async Task<HttpResponseMessage> PostWithCookieAsync(string authRoute, string refreshToken, string? clientIp = null)
     {
         using HttpClient cookieless = createClient(false);
         using var request = new HttpRequestMessage(HttpMethod.Post, Route(authRoute));
         request.Headers.Add("Cookie", $"{RefreshTokenCookie.Name}={refreshToken}");
 
+        if (clientIp is not null)
+        {
+            request.Headers.Add(TestEndpointsStartupFilter.ClientIpHeader, clientIp);
+        }
+
         return await cookieless.SendAsync(request);
     }
 
     /// <summary>POSTs a JSON body (or none) to an auth route, optionally with a bearer token, using this client's cookies.</summary>
-    public Task<HttpResponseMessage> PostJsonAsync(string authRoute, object? body, string? accessToken = null) =>
-        PostAsync(authRoute, body, accessToken, deviceId: null);
+    public Task<HttpResponseMessage> PostJsonAsync(string authRoute, object? body, string? accessToken = null, string? clientIp = null) =>
+        PostAsync(authRoute, body, accessToken, deviceId: null, clientIp);
 
-    public Task<HttpResponseMessage> LogoutAsync() =>
-        PostAsync(RouteConsts.Auth.Logout, body: null, accessToken: null, deviceId: null);
+    public Task<HttpResponseMessage> LogoutAsync(string? clientIp = null) =>
+        PostAsync(RouteConsts.Auth.Logout, body: null, accessToken: null, deviceId: null, clientIp);
 
-    public Task<HttpResponseMessage> LogoutAllAsync(string? accessToken) =>
-        PostAsync(RouteConsts.Auth.LogoutAllDevices, body: null, accessToken, deviceId: null);
+    public Task<HttpResponseMessage> LogoutAllAsync(string? accessToken, string? clientIp = null) =>
+        PostAsync(RouteConsts.Auth.LogoutAllDevices, body: null, accessToken, deviceId: null, clientIp);
 
     public async Task<HttpResponseMessage> GetMeAsync(string? accessToken)
     {
