@@ -15,15 +15,21 @@ try
 
     builder.Services.AddApiVersioningWithOpenApi();
 
+    builder.Services.AddForwardedHeaderSupport(builder.Configuration);
+
     builder.Services.AddExceptionHandling(builder.Environment);
 
     builder.Services.AddRateLimiting(builder.Configuration);
 
     builder.Services.AddRequestTimeoutPolicies(builder.Configuration);
 
-    builder.Services.AddInfrastructure(builder.Configuration);
+    builder.Services.AddInfrastructure(builder.Configuration, builder.Environment);
+
+    builder.Services.AddAuthenticationSettings();
 
     var app = builder.Build();
+
+    app.UseForwardedHeaderSupport();
 
     app.UseExceptionHandling();
 
@@ -37,9 +43,19 @@ try
         await app.ApplyMigrationsAsync();
     }
 
+    if (!app.Environment.IsDevelopment())
+    {
+        app.UseHsts();
+    }
+
     app.UseHttpsRedirection();
 
+    // Authentication runs before the rate limiter so signed-in calls get the per-user bucket.
+    app.UseAuthentication();
+
     app.UseRateLimiting();
+
+    app.UseAuthorization();
 
     app.UseRequestTimeoutPolicies();
 
