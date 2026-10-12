@@ -17,8 +17,14 @@ namespace Liftingo.Application.Features.Account.Shared;
 public sealed partial class AccountEmails(
     IEmailSender sender,
     IOptions<AppOptions> appOptions,
+    TimeProvider timeProvider,
     ILogger<AccountEmails> logger)
 {
+    public const string WelcomeTemplate = "Welcome";
+    public const string NewDeviceTemplate = "NewDevice";
+
+    private static readonly TimeZoneInfo s_displayZone = FindDisplayZone();
+
     public const string VerificationAndWelcomeTemplate = "VerificationAndWelcome";
     public const string VerificationTemplate = "Verification";
     public const string PasswordResetTemplate = "PasswordReset";
@@ -110,6 +116,70 @@ public sealed partial class AccountEmails(
             "<p>Jeśli to nie Ty, zignoruj tę wiadomość. Twoje konto pozostanie bez zmian.</p>";
 
         await SendSafelyAsync(new EmailMessage(email, subject, html, text, ProviderLinkConfirmationTemplate, userId), ct);
+    }
+
+    /// <summary>Welcome without a link, for an account whose e-mail the provider already vouched for (FR-025).</summary>
+    public async Task SendWelcomeAsync(Guid userId, string email, CancellationToken ct)
+    {
+        const string subject = "Witaj w Liftingo";
+
+        const string text =
+            "Witaj w Liftingo!\n\n" +
+            "Twoje konto jest gotowe, a adres e-mail został potwierdzony przez dostawcę logowania. Możesz zaczynać trening.";
+
+        const string html =
+            "<p>Witaj w Liftingo!</p>" +
+            "<p>Twoje konto jest gotowe, a adres e-mail został potwierdzony przez dostawcę logowania. Możesz zaczynać trening.</p>";
+
+        await SendSafelyAsync(new EmailMessage(email, subject, html, text, WelcomeTemplate, userId), ct);
+    }
+
+    /// <summary>
+    /// Security notice for a successful sign-in from a device the account has not used before (FR-026). The time is
+    /// shown in Polish time.
+    /// </summary>
+    public async Task SendNewDeviceAsync(Guid userId, string email, string deviceType, CancellationToken ct)
+    {
+        string when = TimeZoneInfo
+            .ConvertTime(timeProvider.GetUtcNow(), s_displayZone)
+            .ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture);
+        string signOutAll = PlainLink("account/sessions");
+        string resetPassword = PlainLink("auth/forgot-password");
+
+        const string subject = "Nowe logowanie do Twojego konta w Liftingo";
+
+        string text =
+            $"Zalogowano się do Twojego konta w Liftingo z nowego urządzenia.\n\n" +
+            $"Czas logowania: {when}\n" +
+            $"Urządzenie: {deviceType}\n\n" +
+            "Jeśli to Ty, nie musisz nic robić. Jeśli to nie Ty, wyloguj się ze wszystkich urządzeń:\n" +
+            $"{signOutAll}\n\n" +
+            "i zresetuj hasło:\n" +
+            $"{resetPassword}";
+
+        string html =
+            "<p>Zalogowano się do Twojego konta w Liftingo z nowego urządzenia.</p>" +
+            $"<p>Czas logowania: {WebUtility.HtmlEncode(when)}<br>Urządzenie: {WebUtility.HtmlEncode(deviceType)}</p>" +
+            "<p>Jeśli to Ty, nie musisz nic robić. Jeśli to nie Ty:</p>" +
+            $"<p><a href=\"{WebUtility.HtmlEncode(signOutAll)}\">Wyloguj się ze wszystkich urządzeń</a></p>" +
+            $"<p><a href=\"{WebUtility.HtmlEncode(resetPassword)}\">Zresetuj hasło</a></p>";
+
+        await SendSafelyAsync(new EmailMessage(email, subject, html, text, NewDeviceTemplate, userId), ct);
+    }
+
+    private string PlainLink(string path) =>
+        string.Create(CultureInfo.InvariantCulture, $"{appOptions.Value.FrontendBaseUrl!.AbsoluteUri.TrimEnd('/')}/{path}");
+
+    private static TimeZoneInfo FindDisplayZone()
+    {
+        try
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById("Europe/Warsaw");
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            return TimeZoneInfo.Utc;
+        }
     }
 
     private string Link(string path, string token)

@@ -24,6 +24,7 @@ public sealed class HandleExternalLoginCallback : IEndpoint
         IIdentityService identity,
         IApplicationDbContext db,
         SessionIssuer sessions,
+        AccountEmails emails,
         SecurityAudit audit,
         FrontendRedirects redirects,
         CancellationToken ct)
@@ -47,12 +48,12 @@ public sealed class HandleExternalLoginCallback : IEndpoint
 
         if (linked is not null)
         {
-            return await SignInLinkedAccountAsync(http, linked, emailOwner, identity, db, sessions, audit, redirects, client, ct);
+            return await SignInLinkedAccountAsync(http, linked, emailOwner, identity, db, sessions, emails, audit, redirects, client, ct);
         }
 
         if (emailOwner is { EmailVerified: true })
         {
-            return await LinkVerifiedAccountAsync(http, emailOwner, pending, identity, db, sessions, audit, redirects, client, ct);
+            return await LinkVerifiedAccountAsync(http, emailOwner, pending, identity, db, sessions, emails, audit, redirects, client, ct);
         }
 
         // A new user, or the owner of an unverified address taking the account over. Both need consents first
@@ -67,6 +68,7 @@ public sealed class HandleExternalLoginCallback : IEndpoint
         IIdentityService identity,
         IApplicationDbContext db,
         SessionIssuer sessions,
+        AccountEmails emails,
         SecurityAudit audit,
         FrontendRedirects redirects,
         ClientInfo client,
@@ -87,7 +89,7 @@ public sealed class HandleExternalLoginCallback : IEndpoint
             return refused;
         }
 
-        // US7 sends the new-device e-mail when this is true.
+        // A device the account has not used before gets a security notice once the session exists (FR-026).
         bool isNewDevice = await sessions.StageDeviceAsync(linked.Id, client, SignInKind.SignIn, ct);
 
         await db.SaveChangesAsync(ct);
@@ -96,7 +98,10 @@ public sealed class HandleExternalLoginCallback : IEndpoint
         await audit.WriteAsync(linked.Id, SecurityEventType.ExternalLogin, SecurityEventOutcome.Succeeded, client, ct);
         await PendingExternalLogin.ClearAsync(http);
 
-        _ = isNewDevice;
+        if (isNewDevice)
+        {
+            await emails.SendNewDeviceAsync(linked.Id, linked.Email, client.DeviceType, ct);
+        }
 
         return redirects.Callback();
     }
@@ -108,6 +113,7 @@ public sealed class HandleExternalLoginCallback : IEndpoint
         IIdentityService identity,
         IApplicationDbContext db,
         SessionIssuer sessions,
+        AccountEmails emails,
         SecurityAudit audit,
         FrontendRedirects redirects,
         ClientInfo client,
@@ -122,7 +128,7 @@ public sealed class HandleExternalLoginCallback : IEndpoint
 
         await identity.AddLoginAsync(account.Id, pending.Provider, pending.ProviderKey, pending.DisplayName, ct);
 
-        // US7 sends the new-device e-mail when this is true.
+        // A device the account has not used before gets a security notice once the session exists (FR-026).
         bool isNewDevice = await sessions.StageDeviceAsync(account.Id, client, SignInKind.SignIn, ct);
 
         await db.SaveChangesAsync(ct);
@@ -132,7 +138,10 @@ public sealed class HandleExternalLoginCallback : IEndpoint
         await audit.WriteAsync(account.Id, SecurityEventType.ExternalLogin, SecurityEventOutcome.Succeeded, client, ct);
         await PendingExternalLogin.ClearAsync(http);
 
-        _ = isNewDevice;
+        if (isNewDevice)
+        {
+            await emails.SendNewDeviceAsync(account.Id, account.Email, client.DeviceType, ct);
+        }
 
         return redirects.Callback();
     }

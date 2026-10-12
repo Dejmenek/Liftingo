@@ -114,7 +114,7 @@ public sealed class CompleteExternalLogin : IEndpoint
         if (providerEmail)
         {
             return await LinkAccountAsync(
-                request, http, pending, existing, identity, db, sessions, takeover, audit, client, ct);
+                request, http, pending, existing, identity, db, sessions, takeover, emails, audit, client, ct);
         }
 
         // The address was typed in: the owner has to confirm by e-mail before anything is linked (FR-023a, R17).
@@ -175,10 +175,14 @@ public sealed class CompleteExternalLogin : IEndpoint
         await PendingExternalLogin.ClearAsync(http);
 
         // A typed e-mail gets the same combined welcome and verification e-mail as registration (FR-025). A provider
-        // e-mail gets the welcome-only e-mail instead, which US7 adds here (T111).
+        // e-mail gets the welcome-only e-mail instead (FR-025).
         if (verificationToken is not null)
         {
             await emails.SendVerificationAndWelcomeAsync(userId, email, verificationToken, ct);
+        }
+        else
+        {
+            await emails.SendWelcomeAsync(userId, email, ct);
         }
 
         return Results.Json(response, statusCode: StatusCodes.Status201Created);
@@ -193,6 +197,7 @@ public sealed class CompleteExternalLogin : IEndpoint
         IApplicationDbContext db,
         SessionIssuer sessions,
         AccountTakeover takeover,
+        AccountEmails emails,
         SecurityAudit audit,
         ClientInfo client,
         CancellationToken ct)
@@ -218,7 +223,7 @@ public sealed class CompleteExternalLogin : IEndpoint
                 ct);
         }
 
-        // US7 sends the new-device e-mail when this is true.
+        // A device the account has not used before gets a security notice once the session exists (FR-026).
         bool isNewDevice = await sessions.StageDeviceAsync(account.Id, client, SignInKind.SignIn, ct);
 
         await db.SaveChangesAsync(ct);
@@ -233,7 +238,10 @@ public sealed class CompleteExternalLogin : IEndpoint
         await audit.WriteAsync(account.Id, SecurityEventType.ProviderLinked, SecurityEventOutcome.Succeeded, client, ct);
         await PendingExternalLogin.ClearAsync(http);
 
-        _ = isNewDevice;
+        if (isNewDevice)
+        {
+            await emails.SendNewDeviceAsync(account.Id, account.Email, client.DeviceType, ct);
+        }
 
         return Results.Ok(response);
     }

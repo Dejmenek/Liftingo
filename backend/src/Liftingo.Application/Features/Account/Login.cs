@@ -58,6 +58,7 @@ public sealed class Login : IEndpoint
         IApplicationDbContext db,
         FailedLoginThrottle throttle,
         SessionIssuer sessions,
+        AccountEmails emails,
         SecurityAudit audit,
         CancellationToken ct)
     {
@@ -75,7 +76,7 @@ public sealed class Login : IEndpoint
 
         return account is null
             ? await HandleUnknownEmailAsync(email, request.Password, identity, throttle, audit, client, ct)
-            : await HandleKnownAccountAsync(http, account, request.Password, identity, db, sessions, audit, client, ct);
+            : await HandleKnownAccountAsync(http, account, request.Password, identity, db, sessions, emails, audit, client, ct);
     }
 
     private static async Task<IResult> HandleKnownAccountAsync(
@@ -85,6 +86,7 @@ public sealed class Login : IEndpoint
         IIdentityService identity,
         IApplicationDbContext db,
         SessionIssuer sessions,
+        AccountEmails emails,
         SecurityAudit audit,
         ClientInfo client,
         CancellationToken ct)
@@ -116,7 +118,7 @@ public sealed class Login : IEndpoint
 
             default:
                 // Succeeded. The same commit persists the failed-attempt counter reset made by the password check.
-                // US7 sends the new-device e-mail when this is true.
+                // A device the account has not used before gets a security notice once the session exists (FR-026).
                 bool isNewDevice = await sessions.StageDeviceAsync(account.Id, client, SignInKind.SignIn, ct);
 
                 await db.SaveChangesAsync(ct);
@@ -124,7 +126,10 @@ public sealed class Login : IEndpoint
                 AuthSessionResponse response = await sessions.IssueAsync(http, account.Id, client, ct);
                 await audit.WriteAsync(account.Id, SecurityEventType.Login, SecurityEventOutcome.Succeeded, client, ct);
 
-                _ = isNewDevice;
+                if (isNewDevice)
+                {
+                    await emails.SendNewDeviceAsync(account.Id, account.Email, client.DeviceType, ct);
+                }
 
                 return Results.Ok(response);
         }
