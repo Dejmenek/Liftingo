@@ -23,4 +23,22 @@ public class DependencyGuardTests : BaseTest
             .ResideInNamespace("Microsoft.AspNetCore.Identity")
             .Check(Architecture);
     }
+
+    [Fact]
+    public void DomainLayer_ShouldNotDependOn_EntityFrameworkCore()
+    {
+        Types().That().ResideInAssembly(DomainAssembly).Should()
+            .NotDependOnAnyTypesThat()
+            .ResideInNamespace("Microsoft.EntityFrameworkCore")
+            .Check(Architecture);
+    }
+
+    [Fact]
+    public void ApplicationLayer_ShouldNotDependOn_Redis()
+    {
+        Types().That().ResideInAssembly(ApplicationAssembly).Should()
+            .NotDependOnAnyTypesThat()
+            .ResideInNamespace("StackExchange.Redis")
+            .Check(Architecture);
+    }
 }
