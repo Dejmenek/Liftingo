@@ -66,6 +66,7 @@ public sealed class ConfirmProviderLink : IEndpoint
         EmailTokenIssuer emailTokens,
         AccountTakeover takeover,
         SessionIssuer sessions,
+        AccountEmails emails,
         SecurityAudit audit,
         TimeProvider timeProvider,
         CancellationToken ct)
@@ -130,7 +131,7 @@ public sealed class ConfirmProviderLink : IEndpoint
                 ct);
         }
 
-        // US7 sends the new-device e-mail when this is true.
+        // A device the account has not used before gets a security notice once the session exists (FR-026).
         bool isNewDevice = await sessions.StageDeviceAsync(account.Id, client, SignInKind.SignIn, ct);
 
         await db.SaveChangesAsync(ct);
@@ -144,7 +145,10 @@ public sealed class ConfirmProviderLink : IEndpoint
         AuthSessionResponse response = await sessions.IssueAsync(http, account.Id, client, ct);
         await audit.WriteAsync(account.Id, SecurityEventType.ProviderLinked, SecurityEventOutcome.Succeeded, client, ct);
 
-        _ = isNewDevice;
+        if (isNewDevice)
+        {
+            await emails.SendNewDeviceAsync(account.Id, account.Email, client.DeviceType, ct);
+        }
 
         return Results.Ok(response);
     }
