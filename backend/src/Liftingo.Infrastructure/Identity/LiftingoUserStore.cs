@@ -3,6 +3,7 @@ using Liftingo.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace Liftingo.Infrastructure.Identity;
 
@@ -18,7 +19,7 @@ public sealed class LiftingoUserStore : UserStore<ApplicationUser, IdentityRole<
         AutoSaveChanges = false;
     }
 
-    public override Task<IdentityResult> UpdateAsync(ApplicationUser user, CancellationToken cancellationToken = default)
+    public override async Task<IdentityResult> UpdateAsync(ApplicationUser user, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(user);
 
@@ -27,9 +28,20 @@ public sealed class LiftingoUserStore : UserStore<ApplicationUser, IdentityRole<
         // into Modified, and the INSERT would become an UPDATE of a row that does not exist.
         if (Context.Entry(user).State == EntityState.Added)
         {
-            return Task.FromResult(IdentityResult.Success);
+            return IdentityResult.Success;
         }
 
-        return base.UpdateAsync(user, cancellationToken);
+        // Without a save in between, UserManager can call UpdateAsync several times for one user (a password reset
+        // changes the hash, then the lockout). Each call sets a new ConcurrencyStamp, and on the later calls EF takes
+        // the previous stamp as the "original" one, so the final UPDATE would look for a stamp that is not in the
+        // database and throw DbUpdateConcurrencyException. Keep the stamp that was loaded as the original.
+        PropertyEntry<ApplicationUser, string?> stamp = Context.Entry(user).Property(u => u.ConcurrencyStamp);
+        string? loadedStamp = stamp.OriginalValue;
+
+        IdentityResult result = await base.UpdateAsync(user, cancellationToken);
+
+        stamp.OriginalValue = loadedStamp;
+
+        return result;
     }
 }
