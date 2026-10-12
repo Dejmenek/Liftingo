@@ -20,7 +20,15 @@ public abstract class IntegrationTestBase(SqlServerFixture fixture) : IAsyncLife
         Factory.Emails.Clear();
         Factory.Audit.Clear();
         Factory.Logs.Clear();
-        Factory.Time.SetUtcNow(DateTimeOffset.UtcNow);
+
+        // FakeTimeProvider cannot go back. A test that advanced the shared clock would break every later test, so
+        // tests that move the clock use their own host (CreateIsolatedFactory); this only keeps the clock current.
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+
+        if (Factory.Time.GetUtcNow() < now)
+        {
+            Factory.Time.SetUtcNow(now);
+        }
     }
 
     public ValueTask DisposeAsync()
@@ -29,6 +37,12 @@ public abstract class IntegrationTestBase(SqlServerFixture fixture) : IAsyncLife
 
         return ValueTask.CompletedTask;
     }
+
+    /// <summary>
+    /// A host of its own, with its own clock, e-mail and audit capture. Use it in tests that advance
+    /// <see cref="ApiFactory.Time"/>: the shared host's clock must never move.
+    /// </summary>
+    protected ApiFactory CreateIsolatedFactory() => new(Fixture.ConnectionString, Fixture.RedisConnectionString);
 
     /// <summary>Runs <paramref name="action"/> with a fresh <see cref="ApplicationDbContext"/> from the host.</summary>
     protected async Task<T> WithDbAsync<T>(Func<ApplicationDbContext, Task<T>> action)

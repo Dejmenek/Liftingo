@@ -61,18 +61,32 @@ public sealed partial class AuthTestClient(Func<bool, HttpClient> createClient) 
     public Task<HttpResponseMessage> RegisterAsync(RegisterRequestBody request, Guid? deviceId = null) =>
         PostAsync(RouteConsts.Auth.Register, request, accessToken: null, deviceId);
 
-    public Task<HttpResponseMessage> LoginAsync(string email, string password, Guid? deviceId = null) =>
-        PostAsync(RouteConsts.Auth.Login, new { email, password }, accessToken: null, deviceId);
+    /// <param name="clientIp">Sent as the test host's <c>X-Test-Client-Ip</c> header, which sets the request's remote address.</param>
+    /// <param name="userAgent">Sent as <c>User-Agent</c>, which the device label is derived from.</param>
+    public Task<HttpResponseMessage> LoginAsync(
+        string email,
+        string password,
+        Guid? deviceId = null,
+        string? clientIp = null,
+        string? userAgent = null) =>
+        PostAsync(RouteConsts.Auth.Login, new { email, password }, accessToken: null, deviceId, clientIp, userAgent);
 
     /// <summary>Calls refresh with this client's own cookie.</summary>
     public Task<HttpResponseMessage> RefreshAsync() =>
         PostAsync(RouteConsts.Auth.RefreshSession, body: null, accessToken: null, deviceId: null);
 
     /// <summary>Calls refresh with an explicit cookie value (e.g. a replayed one), ignoring this client's cookies.</summary>
-    public async Task<HttpResponseMessage> RefreshWithCookieAsync(string refreshToken)
+    public Task<HttpResponseMessage> RefreshWithCookieAsync(string refreshToken) =>
+        PostWithCookieAsync(RouteConsts.Auth.RefreshSession, refreshToken);
+
+    /// <summary>Calls logout with an explicit cookie value, ignoring this client's cookies.</summary>
+    public Task<HttpResponseMessage> LogoutWithCookieAsync(string refreshToken) =>
+        PostWithCookieAsync(RouteConsts.Auth.Logout, refreshToken);
+
+    private async Task<HttpResponseMessage> PostWithCookieAsync(string authRoute, string refreshToken)
     {
         using HttpClient cookieless = createClient(false);
-        using var request = new HttpRequestMessage(HttpMethod.Post, Route(RouteConsts.Auth.RefreshSession));
+        using var request = new HttpRequestMessage(HttpMethod.Post, Route(authRoute));
         request.Headers.Add("Cookie", $"{RefreshTokenCookie.Name}={refreshToken}");
 
         return await cookieless.SendAsync(request);
@@ -81,7 +95,7 @@ public sealed partial class AuthTestClient(Func<bool, HttpClient> createClient) 
     public Task<HttpResponseMessage> LogoutAsync() =>
         PostAsync(RouteConsts.Auth.Logout, body: null, accessToken: null, deviceId: null);
 
-    public Task<HttpResponseMessage> LogoutAllAsync(string accessToken) =>
+    public Task<HttpResponseMessage> LogoutAllAsync(string? accessToken) =>
         PostAsync(RouteConsts.Auth.LogoutAllDevices, body: null, accessToken, deviceId: null);
 
     public async Task<HttpResponseMessage> GetMeAsync(string? accessToken)
@@ -156,7 +170,13 @@ public sealed partial class AuthTestClient(Func<bool, HttpClient> createClient) 
 
     public void Dispose() => _http.Dispose();
 
-    private async Task<HttpResponseMessage> PostAsync(string authRoute, object? body, string? accessToken, Guid? deviceId)
+    private async Task<HttpResponseMessage> PostAsync(
+        string authRoute,
+        object? body,
+        string? accessToken,
+        Guid? deviceId,
+        string? clientIp = null,
+        string? userAgent = null)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, Route(authRoute));
 
@@ -173,6 +193,16 @@ public sealed partial class AuthTestClient(Func<bool, HttpClient> createClient) 
         if (deviceId is { } id)
         {
             request.Headers.Add(ClientInfo.DeviceIdHeader, id.ToString());
+        }
+
+        if (clientIp is not null)
+        {
+            request.Headers.Add(TestEndpointsStartupFilter.ClientIpHeader, clientIp);
+        }
+
+        if (userAgent is not null)
+        {
+            request.Headers.UserAgent.ParseAdd(userAgent);
         }
 
         return await _http.SendAsync(request);
