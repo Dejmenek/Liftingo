@@ -79,6 +79,75 @@ public class UserContextTests
         Assert.Throws<InvalidOperationException>(() => sut.UserId);
     }
 
+    [Theory]
+    [InlineData("true", true)]
+    [InlineData("True", true)]
+    [InlineData("false", false)]
+    [InlineData("garbage", false)]
+    public void IsEmailVerified_AuthenticatedUserWithClaim_ParsesTheClaim(string value, bool expected)
+    {
+        UserContext sut = CreateSut(CreatePrincipal(authenticated: true, ("email_verified", value)));
+
+        Assert.Equal(expected, sut.IsEmailVerified);
+    }
+
+    [Fact]
+    public void IsEmailVerified_MissingClaim_ReturnsFalse()
+    {
+        UserContext sut = CreateSut(CreatePrincipal(authenticated: true));
+
+        Assert.False(sut.IsEmailVerified);
+    }
+
+    [Fact]
+    public void IsEmailVerified_UnauthenticatedPrincipalWithClaim_ReturnsFalse()
+    {
+        UserContext sut = CreateSut(CreatePrincipal(authenticated: false, ("email_verified", "true")));
+
+        Assert.False(sut.IsEmailVerified);
+    }
+
+    [Fact]
+    public void IsEmailVerified_NoHttpContext_ReturnsFalse()
+    {
+        var sut = new UserContext(new HttpContextAccessor());
+
+        Assert.False(sut.IsEmailVerified);
+    }
+
+    [Fact]
+    public void SessionId_AuthenticatedUserWithSidClaim_ReturnsSessionId()
+    {
+        var expected = Guid.NewGuid();
+        UserContext sut = CreateSut(CreatePrincipal(authenticated: true, ("sid", expected.ToString())));
+
+        Assert.Equal(expected, sut.SessionId);
+    }
+
+    [Fact]
+    public void SessionId_MissingClaim_ReturnsNull()
+    {
+        UserContext sut = CreateSut(CreatePrincipal(authenticated: true));
+
+        Assert.Null(sut.SessionId);
+    }
+
+    [Fact]
+    public void SessionId_ClaimIsNotGuid_ReturnsNull()
+    {
+        UserContext sut = CreateSut(CreatePrincipal(authenticated: true, ("sid", "not-a-guid")));
+
+        Assert.Null(sut.SessionId);
+    }
+
+    [Fact]
+    public void SessionId_UnauthenticatedPrincipal_ReturnsNull()
+    {
+        UserContext sut = CreateSut(CreatePrincipal(authenticated: false, ("sid", Guid.NewGuid().ToString())));
+
+        Assert.Null(sut.SessionId);
+    }
+
     private static UserContext CreateSut(ClaimsPrincipal principal) =>
         new(new HttpContextAccessor { HttpContext = new DefaultHttpContext { User = principal } });
 
