@@ -46,7 +46,7 @@ public static class InfrastructureExtensions
         services.AddAccountOptions(configuration);
         services.AddRedisSessions();
         services.AddIdentityServices(configuration);
-        services.AddAuthenticationSchemes();
+        services.AddAuthenticationSchemes(configuration);
         services.AddEmailSender(environment);
         services.AddSecurityAudit(environment);
 
@@ -181,7 +181,7 @@ public static class InfrastructureExtensions
         services.AddSingleton<IAccessTokenIssuer, JwtAccessTokenIssuer>();
     }
 
-    private static void AddAuthenticationSchemes(this IServiceCollection services)
+    private static void AddAuthenticationSchemes(this IServiceCollection services, IConfiguration configuration)
     {
         services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -202,7 +202,8 @@ public static class InfrastructureExtensions
                 options.Cookie.HttpOnly = true;
                 options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
                 options.Cookie.SameSite = SameSiteMode.Lax;
-            });
+            })
+            .AddExternalProviders(configuration);
 
         services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
             .Configure<IOptions<JwtOptions>, TimeProvider>((bearer, jwtOptions, timeProvider) =>
@@ -226,8 +227,13 @@ public static class InfrastructureExtensions
             });
 
         services.AddOptions<CookieAuthenticationOptions>(AuthenticationSchemes.External)
-            .Configure<IOptions<ExternalLoginOptions>>((cookie, externalLogin) =>
-                cookie.ExpireTimeSpan = externalLogin.Value.PendingTimeout);
+            .Configure<IOptions<ExternalLoginOptions>, TimeProvider>((cookie, externalLogin, timeProvider) =>
+            {
+                cookie.ExpireTimeSpan = externalLogin.Value.PendingTimeout;
+
+                // The 10-minute pending window follows the injected clock, like token lifetimes do.
+                cookie.TimeProvider = timeProvider;
+            });
 
         services.AddAuthorization();
     }
