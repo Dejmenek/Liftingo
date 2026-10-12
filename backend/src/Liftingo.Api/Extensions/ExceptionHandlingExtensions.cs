@@ -26,6 +26,7 @@ internal static class ExceptionHandlingExtensions
         });
 
         services.AddExceptionHandler<DomainExceptionHandler>();
+        services.AddExceptionHandler<SessionStoreUnavailableExceptionHandler>();
         services.AddExceptionHandler<UnhandledExceptionLogger>();
 
         return services;
