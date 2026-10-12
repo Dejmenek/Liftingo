@@ -45,4 +45,24 @@ GET {{Liftingo.Api_HostAddress}}/api/v1/auth/me
 Authorization: Bearer {{AccessToken}}
 Accept: application/json
 
+### Login: valid (200 + liftingo_rt cookie). A new X-Device-Id sends the new-device e-mail once US7 is built
+POST {{Liftingo.Api_HostAddress}}/api/v1/auth/login
+Content-Type: application/json
+X-Device-Id: {{DeviceId}}
+
+{
+  "email": "anna@example.pl",
+  "password": "Sztanga1!"
+}
+
+### Login: wrong password (401 Auth.InvalidCredentials; the 5th wrong attempt gives 429 Auth.LockedOut with retryAfter)
+POST {{Liftingo.Api_HostAddress}}/api/v1/auth/login
+Content-Type: application/json
+X-Device-Id: {{DeviceId}}
+
+{
+  "email": "anna@example.pl",
+  "password": "Zle-haslo1!"
+}
+
 ###

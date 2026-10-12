@@ -15,6 +15,7 @@ internal static class V1Endpoints
     {
         Register.Map(v1);
         GetCurrentAccount.Map(v1);
+        Login.Map(v1);
 
         return v1;
     }
