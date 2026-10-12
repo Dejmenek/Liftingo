@@ -1,8 +1,13 @@
+using Liftingo.Application.Common.Email;
+using Liftingo.Infrastructure.Audit;
+
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Time.Testing;
 
 namespace Liftingo.Api.IntegrationTests.Infrastructure;
 
@@ -27,7 +32,33 @@ public sealed class ApiFactory(
     // Base64 of 32 bytes; only ever used by tests.
     public const string TestJwtSigningKey = "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=";
 
+    // Frontend and legal values the tests rely on.
+    public const string FrontendBaseUrl = "https://localhost:4200";
+    public const string LegalDocumentsVersion = "2026-10-01-test";
+
     public LogEventCollector Logs { get; } = new();
+
+    /// <summary>The clock of the whole host (tokens, sessions, e-mail limits). Starts near real UTC now.</summary>
+    public FakeTimeProvider Time { get; } = new(DateTimeOffset.UtcNow);
+
+    public CapturingEmailSender Emails { get; } = new();
+
+    public CapturingAuditSink Audit { get; } = new();
+
+    /// <summary>
+    /// A client for <c>https://localhost</c>, so <c>Secure</c> cookies are stored and sent. With
+    /// <paramref name="handleCookies"/> it behaves like one browser (one device).
+    /// </summary>
+    public HttpClient CreateApiClient(bool handleCookies = true) =>
+        CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("https://localhost"),
+            HandleCookies = handleCookies,
+            AllowAutoRedirect = false,
+        });
+
+    /// <summary>A new "device": its own cookie jar, calling the auth API.</summary>
+    public AuthTestClient CreateAuthClient() => new(CreateApiClient);
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -36,6 +67,14 @@ public sealed class ApiFactory(
         builder.ConfigureServices(services =>
         {
             services.AddTestEndpoints(Logs);
+
+            // Replace the registrations (not add): the app registers the real ones.
+            services.RemoveAll<TimeProvider>();
+            services.AddSingleton<TimeProvider>(Time);
+            services.RemoveAll<IEmailSender>();
+            services.AddSingleton<IEmailSender>(Emails);
+            services.RemoveAll<IAuditSink>();
+            services.AddSingleton<IAuditSink>(Audit);
 
             if (rateLimitingSettings is null)
             {
@@ -50,7 +89,8 @@ public sealed class ApiFactory(
                 ["ConnectionStrings:Default"] = connectionString,
                 ["ConnectionStrings:Redis"] = redisConnectionString,
                 ["Jwt:SigningKey"] = TestJwtSigningKey,
-                ["App:FrontendBaseUrl"] = "https://localhost:4200",
+                ["App:FrontendBaseUrl"] = FrontendBaseUrl,
+                ["Legal:DocumentsVersion"] = LegalDocumentsVersion,
             });
 
             if (rateLimitingSettings is not null)
