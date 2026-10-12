@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Respawn;
 
 using Testcontainers.MsSql;
+using Testcontainers.Redis;
 
 namespace Liftingo.Api.IntegrationTests.Infrastructure;
 
@@ -13,15 +14,20 @@ public sealed class SqlServerFixture : IAsyncLifetime
 {
     private readonly MsSqlContainer _container = new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-latest").Build();
 
+    // Same tag as backend/docker-compose.yml.
+    private readonly RedisContainer _redisContainer = new RedisBuilder("redis:latest").Build();
+
     private Respawner? _respawner;
 
     public ApiFactory Factory { get; private set; } = null!;
 
     public string ConnectionString => _container.GetConnectionString();
 
+    public string RedisConnectionString => _redisContainer.GetConnectionString();
+
     public async ValueTask InitializeAsync()
     {
-        await _container.StartAsync();
+        await Task.WhenAll(_container.StartAsync(), _redisContainer.StartAsync());
 
         await MigrateAsync();
 
@@ -34,7 +40,7 @@ public sealed class SqlServerFixture : IAsyncLifetime
             TablesToIgnore = [new Respawn.Graph.Table("__EFMigrationsHistory")],
         });
 
-        Factory = new ApiFactory(ConnectionString);
+        Factory = new ApiFactory(ConnectionString, RedisConnectionString);
     }
 
     public async Task ResetDatabaseAsync()
@@ -58,6 +64,7 @@ public sealed class SqlServerFixture : IAsyncLifetime
         }
 
         await _container.DisposeAsync();
+        await _redisContainer.DisposeAsync();
     }
 
     private async Task MigrateAsync()

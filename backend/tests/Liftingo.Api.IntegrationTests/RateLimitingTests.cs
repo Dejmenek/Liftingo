@@ -132,7 +132,7 @@ public class RateLimitingTests(SqlServerFixture fixture) : IntegrationTestBase(f
     }
 
     private ApiFactory CreateLimitedFactory() =>
-        new(Fixture.ConnectionString, new Dictionary<string, string?>
+        new(Fixture.ConnectionString, Fixture.RedisConnectionString, new Dictionary<string, string?>
         {
             ["RateLimiting:Authenticated:TokenLimit"] = AuthenticatedLimit.ToString(CultureInfo.InvariantCulture),
             ["RateLimiting:Authenticated:TokensPerPeriod"] = "1",

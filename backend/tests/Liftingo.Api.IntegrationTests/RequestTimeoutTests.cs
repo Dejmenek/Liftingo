@@ -79,7 +79,7 @@ public class RequestTimeoutTests(SqlServerFixture fixture) : IntegrationTestBase
     private ApiFactory CreateShortTimeoutFactory() => CreateFactory(defaultTimeout: "00:00:00.3", namedTimeout: "00:00:30");
 
     private ApiFactory CreateFactory(string defaultTimeout, string namedTimeout) =>
-        new(Fixture.ConnectionString, requestTimeoutsSettings: new Dictionary<string, string?>
+        new(Fixture.ConnectionString, Fixture.RedisConnectionString, requestTimeoutsSettings: new Dictionary<string, string?>
         {
             ["RequestTimeouts:DefaultTimeout"] = defaultTimeout,
             [$"RequestTimeouts:Policies:{TestEndpointsStartupFilter.SlowNamedPolicyName}"] = namedTimeout,
