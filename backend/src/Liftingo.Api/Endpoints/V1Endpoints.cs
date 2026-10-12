@@ -23,6 +23,13 @@ internal static class V1Endpoints
         ResendVerificationEmail.Map(v1);
         ForgotPassword.Map(v1);
         ResetPassword.Map(v1);
+        GetExternalProviders.Map(v1);
+        StartExternalLogin.Map(v1);
+        HandleExternalLoginCallback.Map(v1);
+        GetPendingExternalLogin.Map(v1);
+        CompleteExternalLogin.Map(v1);
+        CancelExternalLogin.Map(v1);
+        ConfirmProviderLink.Map(v1);
 
         return v1;
     }

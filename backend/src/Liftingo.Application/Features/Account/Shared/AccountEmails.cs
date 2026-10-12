@@ -22,6 +22,7 @@ public sealed partial class AccountEmails(
     public const string VerificationAndWelcomeTemplate = "VerificationAndWelcome";
     public const string VerificationTemplate = "Verification";
     public const string PasswordResetTemplate = "PasswordReset";
+    public const string ProviderLinkConfirmationTemplate = "ProviderLinkConfirmation";
 
     /// <summary>Verification link doubling as the welcome e-mail (FR-025).</summary>
     public async Task SendVerificationAndWelcomeAsync(Guid userId, string email, string token, CancellationToken ct)
@@ -85,6 +86,30 @@ public sealed partial class AccountEmails(
             "<p>Jeśli to nie Ty prosiłeś(-aś) o reset hasła, zignoruj tę wiadomość. Twoje hasło pozostanie bez zmian.</p>";
 
         await SendSafelyAsync(new EmailMessage(email, subject, html, text, PasswordResetTemplate, userId), ct);
+    }
+
+    /// <summary>
+    /// Asks the owner of an address to confirm that a sign-in provider may be linked to the account (FR-023a, R17).
+    /// </summary>
+    public async Task SendProviderLinkConfirmationAsync(Guid userId, string email, string provider, string token, CancellationToken ct)
+    {
+        string link = Link("auth/confirm-link", token);
+
+        const string subject = "Potwierdź połączenie logowania z kontem Liftingo";
+
+        string text =
+            $"Ktoś chce zalogować się do Liftingo przez {provider} i podał Twój adres e-mail.\n\n" +
+            "Jeśli to Ty, otwórz poniższy link, aby połączyć to logowanie z Twoim kontem (ważny 24 godziny):\n" +
+            $"{link}\n\n" +
+            "Jeśli to nie Ty, zignoruj tę wiadomość. Twoje konto pozostanie bez zmian.";
+
+        string html =
+            $"<p>Ktoś chce zalogować się do Liftingo przez {WebUtility.HtmlEncode(provider)} i podał Twój adres e-mail.</p>" +
+            "<p>Jeśli to Ty, kliknij poniższy link, aby połączyć to logowanie z Twoim kontem (ważny 24 godziny):</p>" +
+            $"<p><a href=\"{WebUtility.HtmlEncode(link)}\">Połącz logowanie z kontem</a></p>" +
+            "<p>Jeśli to nie Ty, zignoruj tę wiadomość. Twoje konto pozostanie bez zmian.</p>";
+
+        await SendSafelyAsync(new EmailMessage(email, subject, html, text, ProviderLinkConfirmationTemplate, userId), ct);
     }
 
     private string Link(string path, string token)
