@@ -1,6 +1,6 @@
 using Asp.Versioning;
 
-using Liftingo.Application.Features.Account;
+using Liftingo.Api.Endpoints.Account;
 
 namespace Liftingo.Api.Endpoints;
 
@@ -13,23 +13,23 @@ internal static class V1Endpoints
 
     public static RouteGroupBuilder MapV1Endpoints(this RouteGroupBuilder v1)
     {
-        Register.Map(v1);
-        GetCurrentAccount.Map(v1);
-        Login.Map(v1);
-        RefreshSession.Map(v1);
-        Logout.Map(v1);
-        LogoutAllDevices.Map(v1);
-        VerifyEmail.Map(v1);
-        ResendVerificationEmail.Map(v1);
-        ForgotPassword.Map(v1);
-        ResetPassword.Map(v1);
-        GetExternalProviders.Map(v1);
-        StartExternalLogin.Map(v1);
-        HandleExternalLoginCallback.Map(v1);
-        GetPendingExternalLogin.Map(v1);
-        CompleteExternalLogin.Map(v1);
-        CancelExternalLogin.Map(v1);
-        ConfirmProviderLink.Map(v1);
+        RegisterEndpoint.Map(v1);
+        GetCurrentAccountEndpoint.Map(v1);
+        LoginEndpoint.Map(v1);
+        RefreshSessionEndpoint.Map(v1);
+        LogoutEndpoint.Map(v1);
+        LogoutAllDevicesEndpoint.Map(v1);
+        VerifyEmailEndpoint.Map(v1);
+        ResendVerificationEmailEndpoint.Map(v1);
+        ForgotPasswordEndpoint.Map(v1);
+        ResetPasswordEndpoint.Map(v1);
+        GetExternalProvidersEndpoint.Map(v1);
+        StartExternalLoginEndpoint.Map(v1);
+        HandleExternalLoginCallbackEndpoint.Map(v1);
+        GetPendingExternalLoginEndpoint.Map(v1);
+        CompleteExternalLoginEndpoint.Map(v1);
+        CancelExternalLoginEndpoint.Map(v1);
+        ConfirmProviderLinkEndpoint.Map(v1);
 
         return v1;
     }

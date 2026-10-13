@@ -1,5 +1,5 @@
+using Liftingo.Api.Endpoints.Account.Shared;
 using Liftingo.Api.IntegrationTests.Infrastructure;
-using Liftingo.Application.Features.Account.Shared;
 
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;

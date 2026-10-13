@@ -3,7 +3,6 @@ using System.Security.Claims;
 using AspNet.Security.OAuth.Twitter;
 
 using Liftingo.Application.Common.Security;
-using Liftingo.Application.Features.Account.Shared;
 
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Facebook;
@@ -16,9 +15,10 @@ namespace Liftingo.Infrastructure.Identity;
 
 /// <summary>
 /// Registers the external sign-in providers (R9). A provider is registered only when both of its secrets are
-/// configured, so a missing section switches the provider off instead of failing at startup.
+/// configured, so a missing section switches the provider off instead of failing at startup. Api owns the scheme
+/// that holds the provider's result and the callback path, and passes them in (R20).
 /// </summary>
-internal static class ExternalProviderOptions
+public static class ExternalProviderOptions
 {
     public const string GoogleScheme = "Google";
     public const string FacebookScheme = "Facebook";
@@ -28,10 +28,20 @@ internal static class ExternalProviderOptions
 
     private const string SectionName = "Authentication";
 
-    public static AuthenticationBuilder AddExternalProviders(this AuthenticationBuilder builder, IConfiguration configuration)
+    /// <param name="builder">The authentication builder Api is setting up.</param>
+    /// <param name="configuration">Holds the <c>Authentication:{Provider}</c> secrets.</param>
+    /// <param name="signInScheme">The scheme that keeps the provider's result until the user gives consent.</param>
+    /// <param name="callbackPath">Where a failed provider sign-in sends the browser, so it ends up on the login page.</param>
+    public static AuthenticationBuilder AddExternalProviders(
+        this AuthenticationBuilder builder,
+        IConfiguration configuration,
+        string signInScheme,
+        string callbackPath)
     {
         ArgumentNullException.ThrowIfNull(builder);
         ArgumentNullException.ThrowIfNull(configuration);
+        ArgumentException.ThrowIfNullOrEmpty(signInScheme);
+        ArgumentException.ThrowIfNullOrEmpty(callbackPath);
 
         List<ExternalProvider> registered = [];
 
@@ -41,7 +51,7 @@ internal static class ExternalProviderOptions
             {
                 options.ClientId = googleId;
                 options.ClientSecret = googleSecret;
-                ConfigureCommon(options);
+                ConfigureCommon(options, signInScheme, callbackPath);
             });
             registered.Add(new ExternalProvider("google", GoogleScheme));
         }
@@ -52,7 +62,7 @@ internal static class ExternalProviderOptions
             {
                 options.AppId = facebookId;
                 options.AppSecret = facebookSecret;
-                ConfigureCommon(options);
+                ConfigureCommon(options, signInScheme, callbackPath);
             });
             registered.Add(new ExternalProvider("facebook", FacebookScheme));
         }
@@ -63,7 +73,7 @@ internal static class ExternalProviderOptions
             {
                 options.ClientId = xId;
                 options.ClientSecret = xSecret;
-                ConfigureX(options);
+                ConfigureX(options, signInScheme, callbackPath);
             });
             registered.Add(new ExternalProvider("x", XScheme));
         }
@@ -75,7 +85,7 @@ internal static class ExternalProviderOptions
 
     // Registered on top of the package's own defaults, which read neither the e-mail nor a verified flag from X:
     // the default scopes are tweet.read and users.read, UserFields is empty, and only id, username and name are mapped.
-    internal static void ConfigureX(TwitterAuthenticationOptions options)
+    internal static void ConfigureX(TwitterAuthenticationOptions options, string signInScheme, string callbackPath)
     {
         ArgumentNullException.ThrowIfNull(options);
 
@@ -84,28 +94,18 @@ internal static class ExternalProviderOptions
         options.UserFields.Add("confirmed_email");
         options.ClaimActions.MapJsonSubKey(ClaimTypes.Email, "data", "confirmed_email");
 
-        ConfigureCommon(options);
+        ConfigureCommon(options, signInScheme, callbackPath);
     }
 
-    private static void ConfigureCommon(OAuthOptions options)
+    private static void ConfigureCommon(OAuthOptions options, string signInScheme, string callbackPath)
     {
-        options.SignInScheme = AuthenticationSchemes.External;
-
-        // The scheme name travels in the external cookie with the rest of the properties, so Application never has to
-        // guess the provider from a claims issuer (the X package, for one, issues its claims as "Twitter").
-        options.Events.OnTicketReceived = context =>
-        {
-            context.Properties ??= new AuthenticationProperties();
-            context.Properties.Items[PendingExternalLogin.ProviderItem] = context.Scheme.Name;
-
-            return Task.CompletedTask;
-        };
+        options.SignInScheme = signInScheme;
 
         // A provider error, a cancelled consent screen or a bad state would make the handler throw. Send the browser
         // to the callback endpoint instead, which finds no external principal and redirects to the login page (FR-020).
         options.Events.OnRemoteFailure = context =>
         {
-            context.Response.Redirect(ExternalLoginPaths.Callback);
+            context.Response.Redirect(callbackPath);
             context.HandleResponse();
 
             return Task.CompletedTask;

@@ -1,10 +1,10 @@
 using System.Net;
 
+using Liftingo.Api.Endpoints;
+using Liftingo.Api.Endpoints.Account.Shared;
 using Liftingo.Api.IntegrationTests.Infrastructure;
-using Liftingo.Infrastructure.Email;
-using Liftingo.Application.Common.Routes;
-using Liftingo.Application.Features.Account.Shared;
 using Liftingo.Domain.Account;
+using Liftingo.Infrastructure.Email;
 
 using Microsoft.EntityFrameworkCore;
 

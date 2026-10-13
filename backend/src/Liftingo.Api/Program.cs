@@ -28,7 +28,7 @@ try
 
     builder.Services.AddInfrastructure(builder.Configuration, builder.Environment);
 
-    builder.Services.AddAuthenticationSettings();
+    builder.Services.AddAuthenticationSettings(builder.Configuration);
 
     var app = builder.Build();
 

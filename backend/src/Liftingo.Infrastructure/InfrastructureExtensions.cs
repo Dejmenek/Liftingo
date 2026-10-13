@@ -45,7 +45,6 @@ public static class InfrastructureExtensions
         services.AddAccountOptions(configuration);
         services.AddRedisSessions();
         services.AddIdentityServices(configuration);
-        services.AddAuthenticationSchemes(configuration);
         services.AddEmail(configuration, environment);
         services.AddSecurityAudit(environment);
 
@@ -176,69 +175,10 @@ public static class InfrastructureExtensions
 
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddSingleton<IAccessTokenIssuer, JwtAccessTokenIssuer>();
+
+        // Api registers the JWT bearer scheme; this configures it (R20).
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IConfigureOptions<JwtBearerOptions>, JwtBearerOptionsSetup>());
     }
-
-    private static void AddAuthenticationSchemes(this IServiceCollection services, IConfiguration configuration)
-    {
-        services
-            .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            .AddJwtBearer(options =>
-            {
-                // Keep sub, sid and email_verified under their JWT names.
-                options.MapInboundClaims = false;
-
-                options.Events = new JwtBearerEvents
-                {
-                    OnTokenValidated = SessionValidation.OnTokenValidatedAsync,
-                    OnAuthenticationFailed = SessionValidation.OnAuthenticationFailedAsync,
-                };
-            })
-            .AddCookie(AuthenticationSchemes.External, options =>
-            {
-                options.Cookie.Name = AuthenticationSchemes.External;
-                options.Cookie.HttpOnly = true;
-                options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-                options.Cookie.SameSite = SameSiteMode.Lax;
-            })
-            .AddExternalProviders(configuration);
-
-        services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
-            .Configure<IOptions<JwtOptions>, TimeProvider>((bearer, jwtOptions, timeProvider) =>
-            {
-                JwtOptions jwt = jwtOptions.Value;
-
-                bearer.TokenValidationParameters = new TokenValidationParameters
-                {
-                    ValidateIssuer = true,
-                    ValidIssuer = jwt.Issuer,
-                    ValidateAudience = true,
-                    ValidAudience = jwt.Audience,
-                    ValidateLifetime = true,
-                    RequireExpirationTime = true,
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(Convert.FromBase64String(jwt.SigningKey)),
-                    ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
-                    ClockSkew = TimeSpan.Zero,
-                    LifetimeValidator = (notBefore, expires, _, _) => IsWithinLifetime(timeProvider.GetUtcNow().UtcDateTime, notBefore, expires),
-                };
-            });
-
-        services.AddOptions<CookieAuthenticationOptions>(AuthenticationSchemes.External)
-            .Configure<IOptions<ExternalLoginOptions>, TimeProvider>((cookie, externalLogin, timeProvider) =>
-            {
-                cookie.ExpireTimeSpan = externalLogin.Value.PendingTimeout;
-
-                // The 10-minute pending window follows the injected clock, like token lifetimes do.
-                cookie.TimeProvider = timeProvider;
-            });
-
-        services.AddAuthorization();
-    }
-
-    // Lifetime is checked against the injected TimeProvider, so tests with a fake clock stay consistent
-    // with the tokens they issue. There is no clock skew: an access token lives exactly its lifetime.
-    private static bool IsWithinLifetime(DateTime utcNow, DateTime? notBefore, DateTime? expires) =>
-        expires is not null && expires.Value > utcNow && (notBefore is null || notBefore.Value <= utcNow);
 
     // E-mails are rendered here and handed to a transport. The console transport prints them (links included)
     // for the developer; everywhere else mail is dropped until the Azure Communication Services transport exists.

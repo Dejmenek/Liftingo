@@ -2,10 +2,11 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.RegularExpressions;
 
+using Liftingo.Api.Endpoints;
+using Liftingo.Api.Endpoints.Account.Shared;
 using Liftingo.Api.IntegrationTests.Infrastructure.Fakers;
-using Liftingo.Infrastructure.Email;
-using Liftingo.Application.Common.Routes;
 using Liftingo.Application.Features.Account.Shared;
+using Liftingo.Infrastructure.Email;
 
 namespace Liftingo.Api.IntegrationTests.Infrastructure;
 
@@ -202,7 +203,7 @@ public sealed partial class AuthTestClient(Func<bool, HttpClient> createClient) 
 
         if (deviceId is { } id)
         {
-            request.Headers.Add(ClientInfo.DeviceIdHeader, id.ToString());
+            request.Headers.Add(ClientInfoReader.DeviceIdHeader, id.ToString());
         }
 
         if (clientIp is not null)

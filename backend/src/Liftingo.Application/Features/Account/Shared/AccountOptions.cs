@@ -13,9 +13,6 @@ public sealed class SessionsOptions
 
     // Hard cap measured from the sign-in, however often the session is renewed.
     public TimeSpan AbsoluteLifetime { get; init; }
-
-    // Not read from configuration: Api sets it from the API version prefix (PostConfigure).
-    public string CookiePath { get; set; } = string.Empty;
 }
 
 public sealed class KnownDevicesOptions
