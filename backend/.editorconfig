@@ -246,6 +246,11 @@ dotnet_naming_style.pascal_case.required_suffix =
 dotnet_naming_style.pascal_case.word_separator =
 dotnet_naming_style.pascal_case.capitalization = pascal_case
 
+dotnet_naming_style.begins_with_i.required_prefix = I
+dotnet_naming_style.begins_with_i.required_suffix = 
+dotnet_naming_style.begins_with_i.word_separator = 
+dotnet_naming_style.begins_with_i.capitalization = pascal_case
+
 #### Code analysis rule overrides ####
 
 # CA2007: Consider calling ConfigureAwait on the awaited task.
@@ -310,11 +315,6 @@ dotnet_diagnostic.CA1000.severity = none
 # response its handler returns.
 [**/Common/Messaging/{ICommand,IQuery}.cs]
 dotnet_diagnostic.S2326.severity = none
-
-dotnet_naming_style.begins_with_i.required_prefix = I
-dotnet_naming_style.begins_with_i.required_suffix = 
-dotnet_naming_style.begins_with_i.word_separator = 
-dotnet_naming_style.begins_with_i.capitalization = pascal_case
 
 # EF Core generated migrations: the scaffolder emits constant array arguments
 [**/Persistence/Migrations/*.cs]
