@@ -1,6 +1,7 @@
 using FluentValidation.Results;
 
 using Liftingo.Application.Common.Email;
+using Liftingo.Application.Common.Messaging;
 using Liftingo.Application.Common.Persistence;
 using Liftingo.Application.Common.Result;
 using Liftingo.Application.Common.Security;
@@ -18,7 +19,7 @@ public sealed class LoginCommandHandler(
     SessionIssuer sessions,
     IEmailSender emails,
     SecurityAudit audit,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider) : ICommandHandler<LoginCommand, LoginResponse>
 {
     // One error for every kind of wrong credential, so the answer never says whether the address is registered.
     private static readonly Error s_invalidCredentials =

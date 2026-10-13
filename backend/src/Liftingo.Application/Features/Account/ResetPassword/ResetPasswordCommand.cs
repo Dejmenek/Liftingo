@@ -1,3 +1,4 @@
+using Liftingo.Application.Common.Messaging;
 using Liftingo.Application.Features.Account.Shared;
 
 namespace Liftingo.Application.Features.Account.ResetPassword;
@@ -14,4 +15,4 @@ public sealed record ResetPasswordCommand(
     bool? AcceptTermsAndAge,
     bool? AcceptHealthData,
     bool? AcceptMarketing,
-    ClientInfo Client);
+    ClientInfo Client) : ICommand;

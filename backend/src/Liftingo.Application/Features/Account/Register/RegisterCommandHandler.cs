@@ -2,6 +2,7 @@ using FluentValidation.Results;
 
 using Liftingo.Application.Common.Email;
 using Liftingo.Application.Common.Exceptions;
+using Liftingo.Application.Common.Messaging;
 using Liftingo.Application.Common.Persistence;
 using Liftingo.Application.Common.Result;
 using Liftingo.Application.Common.Security;
@@ -19,7 +20,7 @@ public sealed class RegisterCommandHandler(
     SessionIssuer sessions,
     EmailTokenIssuer emailTokens,
     IEmailSender emails,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider) : ICommandHandler<RegisterCommand, RegisterResponse>
 {
     private static readonly Error s_emailTaken =
         Error.Conflict("Auth.EmailTaken", "Konto z tym adresem e-mail już istnieje.");

@@ -1,4 +1,5 @@
 using Liftingo.Application.Common.Email;
+using Liftingo.Application.Common.Messaging;
 using Liftingo.Application.Common.Persistence;
 using Liftingo.Application.Common.Result;
 using Liftingo.Application.Common.Security;
@@ -19,7 +20,7 @@ public sealed class HandleExternalLoginCallbackCommandHandler(
     SessionIssuer sessions,
     IEmailSender emails,
     SecurityAudit audit,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider) : ICommandHandler<HandleExternalLoginCallbackCommand, HandleExternalLoginCallbackResponse>
 {
     private static readonly HandleExternalLoginCallbackResponse s_consentRequired =
         new(HandleExternalLoginCallbackOutcome.ConsentRequired, Session: null);

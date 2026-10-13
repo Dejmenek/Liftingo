@@ -1,5 +1,6 @@
 using Liftingo.Api.Endpoints.Account.Shared;
 using Liftingo.Api.Http;
+using Liftingo.Application.Common.Messaging;
 using Liftingo.Application.Common.Result;
 using Liftingo.Application.Features.Account.RefreshSession;
 
@@ -17,7 +18,7 @@ internal sealed class RefreshSessionEndpoint : IEndpoint
 
     private static async Task<IResult> HandleAsync(
         HttpContext http,
-        RefreshSessionCommandHandler handler,
+        ICommandHandler<RefreshSessionCommand, RefreshSessionResponse> handler,
         RefreshTokenCookie refreshCookie,
         CancellationToken ct)
     {

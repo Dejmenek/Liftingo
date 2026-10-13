@@ -1,3 +1,4 @@
+using Liftingo.Application.Common.Messaging;
 using Liftingo.Application.Features.Account.ResendVerificationEmail;
 
 namespace Liftingo.Api.Endpoints.Account;
@@ -13,7 +14,7 @@ internal sealed class ResendVerificationEmailEndpoint : IEndpoint
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
     // 202 whatever happens, so the answer says nothing about the limit or the account state (FR-037).
-    private static async Task<IResult> HandleAsync(ResendVerificationEmailCommandHandler handler, CancellationToken ct)
+    private static async Task<IResult> HandleAsync(ICommandHandler<ResendVerificationEmailCommand> handler, CancellationToken ct)
     {
         await handler.HandleAsync(new ResendVerificationEmailCommand(), ct);
 

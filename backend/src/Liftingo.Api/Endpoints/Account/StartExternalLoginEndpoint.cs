@@ -3,6 +3,7 @@ using System.Globalization;
 using Liftingo.Api.Endpoints.Account.Shared;
 using Liftingo.Api.Http;
 using Liftingo.Api.Security;
+using Liftingo.Application.Common.Messaging;
 using Liftingo.Application.Common.Result;
 using Liftingo.Application.Features.Account.StartExternalLogin;
 
@@ -23,7 +24,7 @@ internal sealed class StartExternalLoginEndpoint : IEndpoint
     private static async Task<IResult> HandleAsync(
         string provider,
         string? deviceId,
-        StartExternalLoginQueryHandler handler,
+        IQueryHandler<StartExternalLoginQuery, StartExternalLoginResponse> handler,
         CancellationToken ct)
     {
         Result<StartExternalLoginResponse> result = await handler.HandleAsync(new StartExternalLoginQuery(provider), ct);

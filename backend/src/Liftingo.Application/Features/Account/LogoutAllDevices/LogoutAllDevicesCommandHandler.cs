@@ -1,3 +1,4 @@
+using Liftingo.Application.Common.Messaging;
 using Liftingo.Application.Common;
 using Liftingo.Application.Common.Persistence;
 using Liftingo.Application.Common.Result;
@@ -14,7 +15,7 @@ public sealed class LogoutAllDevicesCommandHandler(
     IUserContext userContext,
     IApplicationDbContext db,
     ISessionStore sessionStore,
-    SecurityAudit audit)
+    SecurityAudit audit) : ICommandHandler<LogoutAllDevicesCommand>
 {
     public async Task<Result> HandleAsync(LogoutAllDevicesCommand command, CancellationToken ct)
     {

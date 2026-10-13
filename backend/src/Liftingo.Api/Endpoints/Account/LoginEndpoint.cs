@@ -1,5 +1,6 @@
 using Liftingo.Api.Endpoints.Account.Shared;
 using Liftingo.Api.Http;
+using Liftingo.Application.Common.Messaging;
 using Liftingo.Application.Common.Result;
 using Liftingo.Application.Features.Account.Login;
 
@@ -18,7 +19,7 @@ internal sealed class LoginEndpoint : IEndpoint
     private static async Task<IResult> HandleAsync(
         LoginRequest request,
         HttpContext http,
-        LoginCommandHandler handler,
+        ICommandHandler<LoginCommand, LoginResponse> handler,
         RefreshTokenCookie refreshCookie,
         CancellationToken ct)
     {

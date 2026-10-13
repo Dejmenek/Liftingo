@@ -1,3 +1,4 @@
+using Liftingo.Application.Common.Messaging;
 using Liftingo.Application.Common.Result;
 using Liftingo.Application.Features.Account.GetCurrentAccount;
 
@@ -11,7 +12,7 @@ internal sealed class GetCurrentAccountEndpoint : IEndpoint
             .Produces<GetCurrentAccountResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status401Unauthorized);
 
-    private static async Task<IResult> HandleAsync(GetCurrentAccountQueryHandler handler, CancellationToken ct)
+    private static async Task<IResult> HandleAsync(IQueryHandler<GetCurrentAccountQuery, GetCurrentAccountResponse> handler, CancellationToken ct)
     {
         Result<GetCurrentAccountResponse> result = await handler.HandleAsync(new GetCurrentAccountQuery(), ct);
 
