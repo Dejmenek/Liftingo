@@ -1,4 +1,3 @@
-using Liftingo.Application.Common;
 using Liftingo.Application.Common.Email;
 using Liftingo.Application.Common.Persistence;
 using Liftingo.Application.Common.Security;
@@ -49,9 +48,6 @@ public static class InfrastructureExtensions
         services.AddAuthenticationSchemes(configuration);
         services.AddEmailSender(environment);
         services.AddSecurityAudit(environment);
-
-        services.AddHttpContextAccessor();
-        services.AddScoped<IUserContext, UserContext>();
 
         return services;
     }
