@@ -2,37 +2,85 @@
 
 ## Core Principles
 
-### I. Vertical Slice on Clean Architecture
+### I. Clean Architecture Layers, Vertical Slices
 The backend is a monolith of four projects with dependencies pointing inward: `Domain` depends on
 nothing, `Application` depends only on `Domain`, and `Infrastructure` and `Api` depend on
-`Application` (`Api` also references `Infrastructure` for DI wiring only).
+`Application`. `Api` also references `Infrastructure`, for DI wiring only. Inside each layer, code
+is grouped by product module (Account, Plans, WorkoutLog, ...), and each use case is one slice.
 
-- Every endpoint MUST be one vertical slice in one file under
-  `Liftingo.Application/Features/{Module}/`, named after the use case in PascalCase (not the HTTP
-  verb) and containing, in order: request DTO, response DTO, validator, handler/route registration.
-- `Application` MUST NOT reference `Infrastructure`. It defines the interfaces it needs
-  (`IApplicationDbContext`, `IAiClient`, `IEmailSender`, ...); `Infrastructure` implements them.
-- `Domain` MUST NOT reference EF Core or any framework type.
-- `Api` MUST NOT contain business logic.
+- **`Domain`** holds the business rules: entities, aggregates, value objects, domain events,
+  domain services and domain exceptions. Pure logic with no I/O (the progression rules engine, the
+  methodology validator) MUST live here. `Domain` MUST NOT reference EF Core, ASP.NET Core or any
+  other package beyond the .NET base class library.
+- **`Application`** holds the use cases. It orchestrates domain objects, checks resource-level
+  business authorization (ownership, visibility, per-user quotas) and defines the ports it needs
+  (`IApplicationDbContext`, `IAiClient`, `IEmailSender`, `ICurrentUser`, `ISecurityAuditLog`,
+  ...). It MUST reference only `Domain` and these packages: `Microsoft.EntityFrameworkCore` (the
+  core package, see Principle II), `Microsoft.Extensions.DependencyInjection.Abstractions`,
+  `Microsoft.Extensions.Logging.Abstractions`, `Microsoft.Extensions.Options` and
+  `FluentValidation`. Adding a package to this list requires an amendment.
+- `Application` MUST NOT reference `Infrastructure`, `Api`, the ASP.NET Core shared framework,
+  EF Core provider packages, Identity, Redis, Hangfire, Serilog or any Azure SDK. It MUST NOT
+  contain HTTP concerns (`HttpContext`, `IResult`, status codes, cookies, redirects, route
+  mapping), raw SQL, EF Core model configuration or caching code.
+- **`Infrastructure`** implements the ports: `ApplicationDbContext`, EF Core configurations and
+  migrations, ASP.NET Core Identity and external auth providers, the Redis session store and
+  caches, external clients (Microsoft Foundry, e-mail, blob storage, PDF generation), e-mail
+  templates, the security audit sink and its key store, and options binding. Hangfire job
+  definitions live here and MUST only call `Application` handlers. `Infrastructure` MUST NOT
+  contain business rules.
+- **`Api`** is the composition root and the HTTP mapping. It owns endpoints (one per use case
+  under `Liftingo.Api/Endpoints/{Module}/`), `RouteConsts` and the version prefix, binding
+  requests to commands and queries, mapping `Result` errors to status codes and RFC 9457
+  `ProblemDetails`, authentication schemes and authorization policies, cookies and redirects, the
+  `HttpContext`-based `ICurrentUser`, the global exception handler, OpenAPI metadata, CORS and
+  HTTP rate limiting. `Api` MUST NOT contain business logic or query the database.
+- Each use case MUST be one slice under `Liftingo.Application/Features/{Module}/{UseCase}/`,
+  named after the use case in PascalCase (not the HTTP verb).
 - Route strings MUST come from `RouteConsts`, never inline literals.
+- The layer and package rules above MUST be enforced by `Liftingo.ArchitectureTests`.
 
 Rationale: slices keep each feature self-contained and reviewable; inward dependencies keep the
-domain testable and the infrastructure replaceable.
+domain testable and the infrastructure replaceable; keeping HTTP out of `Application` lets the
+same use case run from an endpoint, a background job or a test.
 
-### II. Explicit Results, No Hidden Abstractions
-Handlers MUST return `Result<T>` for every expected failure (validation, not found, conflict,
-rule violation). Exceptions are reserved for unexpected conditions and MUST NOT carry business
-flow.
+### II. Explicit Use Cases, No Hidden Pipeline
+Use cases follow CQRS without a mediator. A **command** changes state; a **query** only reads and
+MUST NOT write. Each has a handler class that is registered in DI and injected directly into its
+endpoint or job.
 
-- Handlers MUST query `IApplicationDbContext` `DbSet<T>` properties directly with LINQ.
-- Per-aggregate repositories, AutoMapper (or any mapping library) and MediatR (or any mediator)
-  MUST NOT be introduced. Entity-to-DTO mapping is written by hand.
-- Request/response DTOs MUST be positional records; DI MUST use primary constructors; file-scoped
-  namespaces and nullable reference types MUST be enabled; handlers MUST be `async` and accept a
-  `CancellationToken`; FluentValidation validators MUST be colocated with their endpoint.
+- Each slice MUST be a folder `Features/{Module}/{UseCase}/` holding one type per file:
+  `{UseCase}Command` or `{UseCase}Query`, `{UseCase}CommandHandler` or `{UseCase}QueryHandler`,
+  `{UseCase}CommandValidator` or `{UseCase}QueryValidator` (when the input needs validating) and
+  `{UseCase}Response`. HTTP request records MUST NOT live in `Application`; `Api` declares one
+  only when the HTTP shape differs from the command or query.
+- Code used by two or more slices of a module MUST go in `Features/{Module}/Shared/`; code used
+  across modules goes in `Application/Common/`, and business rules go in `Domain`. Response DTOs
+  MUST NOT be shared between slices, and a handler MUST NOT call another handler.
+- The handler MUST make the use case's flow visible from top to bottom. It MUST explicitly call
+  its validator, check business authorization, orchestrate domain objects, own the transaction
+  (`SaveChangesAsync`, or an explicit transaction when one use case spans several saves), write
+  its log entries and emit its audit events. Endpoint filters, decorators or pipeline behaviors
+  MUST NOT do this work implicitly.
+- Handlers MUST return `Result<T>` for every expected failure (validation, not found, conflict,
+  rule violation). Error types MUST be HTTP-agnostic; `Api` maps them to status codes.
+  Exceptions are reserved for unexpected conditions and broken domain invariants and MUST NOT
+  carry business flow.
+- Handlers MUST query `IApplicationDbContext` `DbSet<T>` properties directly with LINQ. This is
+  the one framework exception in `Application`: it may use the EF Core core package for
+  `DbSet<T>`, async LINQ operators, `Include`, `AsNoTracking` and transactions from the context.
+  Commands load aggregates, change them through domain methods and save; queries use
+  `AsNoTracking` and project to DTOs.
+- Per-aggregate repositories, AutoMapper (or any mapping library) and MediatR (or any mediator,
+  dispatcher or pipeline) MUST NOT be introduced. Entity-to-DTO mapping is written by hand.
+- Commands, queries and DTOs MUST be positional records; DI MUST use primary constructors;
+  file-scoped namespaces and nullable reference types MUST be enabled; handlers MUST be `async`
+  and accept a `CancellationToken`.
 
-Rationale: the endpoint handler is the single, obvious entry point for each use case, and failure
-modes stay visible in method signatures.
+Rationale: a reader sees the whole use case, including validation, transaction boundaries and
+audit, in one method, with nothing running before or after it unseen. Allowing EF Core's core
+package in `Application` is a deliberate trade-off that avoids a repository layer, while the
+provider, configuration and migrations stay in `Infrastructure`.
 
 ### III. Privacy and Compliance by Design (NON-NEGOTIABLE)
 Liftingo processes health-category data (body weight, height) and an opt-in social graph, and
@@ -198,4 +246,4 @@ frontend) are the source of runtime development guidance.
 - **Dependency drift**: when a PRD requirement or tech-stack choice changes, this constitution and
   the relevant `AGENTS.md` MUST be updated in the same change.
 
-**Version**: 1.1.0 | **Ratified**: 2026-10-06 | **Last Amended**: 2026-10-12
+**Version**: 2.0.0 | **Ratified**: 2026-10-06 | **Last Amended**: 2026-10-13
