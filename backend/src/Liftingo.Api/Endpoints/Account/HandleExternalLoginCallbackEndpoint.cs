@@ -7,7 +7,7 @@ using Liftingo.Application.Features.Account.Shared;
 
 namespace Liftingo.Api.Endpoints.Account;
 
-// No request body and no response body: always a 302 to the frontend, whatever happened (contract: callback table).
+// No request body and no response body: always a 302 to the frontend, whatever happened.
 internal sealed class HandleExternalLoginCallbackEndpoint : IEndpoint
 {
     public static void Map(RouteGroupBuilder group) =>

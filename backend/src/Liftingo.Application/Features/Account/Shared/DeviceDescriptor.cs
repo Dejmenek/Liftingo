@@ -4,7 +4,7 @@ namespace Liftingo.Application.Features.Account.Shared;
 
 /// <summary>
 /// Turns a User-Agent header into a coarse, human-readable device label, e.g. "Chrome, Windows, komputer".
-/// A hand-written classifier is enough for one label; a UA-parser package would be a dependency for nothing (R6).
+/// A hand-written classifier is enough for one label; a UA-parser package would be a dependency for nothing.
 /// </summary>
 public static class DeviceDescriptor
 {

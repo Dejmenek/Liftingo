@@ -9,7 +9,7 @@ namespace Liftingo.Application.Features.Account.Shared;
 
 /// <summary>
 /// Writes security audit events. IP address and device type are attached only when the event has a
-/// user (FR-014). A failure to write is logged and swallowed: auditing never fails the request (R14).
+/// user. A failure to write is logged and swallowed: auditing never fails the request.
 /// </summary>
 public sealed partial class SecurityAudit(
     ISecurityAuditLog auditLog,
@@ -54,7 +54,7 @@ public sealed partial class SecurityAudit(
         }
     }
 
-    // The plain log line holds event type, outcome and user id only: no IP, no device (R14).
+    // The plain log line holds event type, outcome and user id only: no IP, no device.
     [LoggerMessage(Level = LogLevel.Information, Message = "Security event {EventType} {Outcome} for user {UserId}.")]
     private partial void LogEvent(SecurityEventType eventType, SecurityEventOutcome outcome, Guid? userId);
 

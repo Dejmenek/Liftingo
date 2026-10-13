@@ -13,7 +13,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 namespace Liftingo.Application.Features.Account.ResetPassword;
 
 /// <summary>
-/// Sets a new password from a reset link and signs every session out (FR-034, FR-035). It starts no session: the
+/// Sets a new password from a reset link and signs every session out. It starts no session: the
 /// user signs in with the new password.
 /// </summary>
 public sealed class ResetPasswordCommandHandler(
@@ -60,7 +60,7 @@ public sealed class ResetPasswordCommandHandler(
         bool takeoverNeeded = !account.EmailVerified;
 
         // Opening the link proved the inbox, so for an unverified account this takes it over from whoever registered
-        // it (FR-035, R7). The required consents come first: nothing is touched without them.
+        // it. The required consents come first: nothing is touched without them.
         if (takeoverNeeded && command is not { AcceptTermsAndAge: true, AcceptHealthData: true })
         {
             return Result.Failure(s_consentRequired);

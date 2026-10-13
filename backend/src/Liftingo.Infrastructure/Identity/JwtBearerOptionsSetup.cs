@@ -5,7 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 namespace Liftingo.Infrastructure.Identity;
 
 /// <summary>
-/// Configures the JWT bearer scheme that Api registers (R20): the signing key, issuer and audience from
+/// Configures the JWT bearer scheme that Api registers: the signing key, issuer and audience from
 /// <see cref="JwtOptions"/>, lifetimes checked against the injected clock, and the session check of
 /// <see cref="SessionValidation"/>.
 /// </summary>

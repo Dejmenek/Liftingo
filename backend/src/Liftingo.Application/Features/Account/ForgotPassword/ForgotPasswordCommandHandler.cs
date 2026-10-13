@@ -13,7 +13,7 @@ namespace Liftingo.Application.Features.Account.ForgotPassword;
 
 /// <summary>
 /// Sends a reset link to a registered address. Registered, unregistered and rate-limited addresses all get the same
-/// answer (SC-008).
+/// answer.
 /// </summary>
 public sealed class ForgotPasswordCommandHandler(
     ForgotPasswordCommandValidator validator,

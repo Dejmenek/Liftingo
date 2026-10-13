@@ -11,7 +11,7 @@ namespace Liftingo.Infrastructure.Email;
 
 /// <summary>
 /// The Polish e-mails of the Account module, built from plain strings (no templating engine). Links point at the
-/// frontend, and times are shown in <see cref="EmailOptions.DisplayTimeZone"/> (R24, FR-026a).
+/// frontend, and times are shown in <see cref="EmailOptions.DisplayTimeZone"/>.
 /// </summary>
 public sealed class AccountEmailRenderer(IOptions<AppOptions> appOptions, IOptions<EmailOptions> emailOptions)
 {
@@ -61,7 +61,7 @@ public sealed class AccountEmailRenderer(IOptions<AppOptions> appOptions, IOptio
         };
     }
 
-    // Verification link doubling as the welcome e-mail (FR-025).
+    // Verification link doubling as the welcome e-mail.
     private EmailMessage VerificationAndWelcome(VerificationAndWelcomeEmail email)
     {
         string link = Link("auth/verify-email", email.Token);
@@ -83,7 +83,7 @@ public sealed class AccountEmailRenderer(IOptions<AppOptions> appOptions, IOptio
         return new EmailMessage(email.To, subject, html, text, VerificationAndWelcomeTemplate, email.UserId);
     }
 
-    // Verification link without the welcome text, for a resend (FR-018).
+    // Verification link without the welcome text, for a resend.
     private EmailMessage Verification(VerificationEmail email)
     {
         string link = Link("auth/verify-email", email.Token);
@@ -103,7 +103,7 @@ public sealed class AccountEmailRenderer(IOptions<AppOptions> appOptions, IOptio
         return new EmailMessage(email.To, subject, html, text, VerificationTemplate, email.UserId);
     }
 
-    // Password reset link, valid one hour (FR-033).
+    // Password reset link, valid one hour.
     private EmailMessage PasswordReset(PasswordResetEmail email)
     {
         string link = Link("auth/reset-password", email.Token);
@@ -125,7 +125,7 @@ public sealed class AccountEmailRenderer(IOptions<AppOptions> appOptions, IOptio
         return new EmailMessage(email.To, subject, html, text, PasswordResetTemplate, email.UserId);
     }
 
-    // Asks the owner of an address to confirm that a sign-in provider may be linked to the account (FR-023a, R17).
+    // Asks the owner of an address to confirm that a sign-in provider may be linked to the account.
     private EmailMessage ProviderLinkConfirmation(ProviderLinkConfirmationEmail email)
     {
         string link = Link("auth/confirm-link", email.Token);
@@ -147,7 +147,7 @@ public sealed class AccountEmailRenderer(IOptions<AppOptions> appOptions, IOptio
         return new EmailMessage(email.To, subject, html, text, ProviderLinkConfirmationTemplate, email.UserId);
     }
 
-    // Welcome without a link, for an account whose e-mail the provider already vouched for (FR-025).
+    // Welcome without a link, for an account whose e-mail the provider already vouched for.
     private static EmailMessage Welcome(WelcomeEmail email)
     {
         const string subject = "Witaj w Liftingo";
@@ -163,7 +163,7 @@ public sealed class AccountEmailRenderer(IOptions<AppOptions> appOptions, IOptio
         return new EmailMessage(email.To, subject, html, text, WelcomeTemplate, email.UserId);
     }
 
-    // Security notice for a sign-in from a device the account has not used before (FR-026), in the display zone.
+    // Security notice for a sign-in from a device the account has not used before, in the display zone.
     private EmailMessage NewDevice(NewDeviceEmail email)
     {
         string when = TimeZoneInfo

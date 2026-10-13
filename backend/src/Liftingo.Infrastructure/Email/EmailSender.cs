@@ -8,7 +8,7 @@ namespace Liftingo.Infrastructure.Email;
 
 /// <summary>
 /// Renders an e-mail record and hands it to the transport. A failure is logged with the template name and user
-/// id only and never reaches the use case that sent the e-mail (FR-029).
+/// id only and never reaches the use case that sent the e-mail.
 /// </summary>
 public sealed partial class EmailSender(
     AccountEmailRenderer renderer,

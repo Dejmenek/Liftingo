@@ -21,7 +21,7 @@ public sealed record TakeoverConsents(bool AcceptTermsAndAge, bool AcceptHealthD
 
 /// <summary>
 /// The owner of an unverified e-mail address proves the inbox (provider sign-in, link confirmation or password
-/// reset) and takes the account over from whoever registered it (R10, R7).
+/// reset) and takes the account over from whoever registered it.
 /// </summary>
 public sealed class AccountTakeover(
     IIdentityService identity,

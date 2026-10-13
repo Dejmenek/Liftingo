@@ -14,7 +14,7 @@ public sealed class ConsentRecorder(
 {
     /// <summary>
     /// Adds exactly three rows, one per <see cref="ConsentType"/>. A declined marketing consent is
-    /// stored as <c>false</c> so the refusal is provable (FR-004).
+    /// stored as <c>false</c> so the refusal is provable.
     /// </summary>
     public void Stage(Guid userId, bool acceptTermsAndAge, bool acceptHealthData, bool acceptMarketing)
     {

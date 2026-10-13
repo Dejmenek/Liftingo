@@ -11,7 +11,7 @@ namespace Liftingo.Application.Features.Account.Shared;
 public sealed record ProviderLinkInfo(string LoginProvider, string ProviderKey);
 
 /// <summary>
-/// Issues single-use e-mail tokens (R7). It only stages changes: the caller saves, then sends the e-mail.
+/// Issues single-use e-mail tokens. It only stages changes: the caller saves, then sends the e-mail.
 /// </summary>
 public sealed class EmailTokenIssuer(
     IApplicationDbContext db,
@@ -25,7 +25,7 @@ public sealed class EmailTokenIssuer(
 
     /// <returns>
     /// The token to put in the e-mail, or <c>null</c> when the user already has
-    /// <see cref="EmailTokensOptions.MaxPerAddressPerHour"/> tokens of this purpose from the last hour (FR-037):
+    /// <see cref="EmailTokensOptions.MaxPerAddressPerHour"/> tokens of this purpose from the last hour:
     /// the caller answers normally and sends nothing.
     /// </returns>
     public async Task<string?> IssueAsync(

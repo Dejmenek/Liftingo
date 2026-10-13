@@ -28,7 +28,7 @@ namespace Liftingo.Infrastructure;
 
 public static class InfrastructureExtensions
 {
-    // A dead Redis has to fail a request quickly with a 503 (FR-015c), not hold it for the library default.
+    // A dead Redis has to fail a request quickly with a 503, not hold it for the library default.
     private const int RedisConnectTimeoutMilliseconds = 2000;
     private const int RedisCommandTimeoutMilliseconds = 2000;
 
@@ -176,7 +176,7 @@ public static class InfrastructureExtensions
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddSingleton<IAccessTokenIssuer, JwtAccessTokenIssuer>();
 
-        // Api registers the JWT bearer scheme; this configures it (R20).
+        // Api registers the JWT bearer scheme; this configures it.
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IConfigureOptions<JwtBearerOptions>, JwtBearerOptionsSetup>());
     }
 

@@ -8,6 +8,6 @@ public enum CompleteExternalLoginOutcome
     // The provider was linked to an existing account (a takeover of an unverified one) and the user signed in.
     SignedIn,
 
-    // The typed-in address has an account: a link-confirmation e-mail went out instead (FR-023a).
+    // The typed-in address has an account: a link-confirmation e-mail went out instead.
     LinkConfirmationSent,
 }

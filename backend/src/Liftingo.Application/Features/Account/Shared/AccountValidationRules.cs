@@ -17,7 +17,7 @@ public static class AccountValidationRules
     private static readonly EmailAddressAttribute s_emailFormat = new();
 
     /// <summary>
-    /// Validates the trimmed e-mail (FR-005): present, at most 256 characters, valid format. It trims by
+    /// Validates the trimmed e-mail: present, at most 256 characters, valid format. It trims by
     /// itself, so the slice must still use the trimmed value when it stores or looks up the address.
     /// </summary>
     public static IRuleBuilderOptions<T, string> MustBeValidEmail<T>(this IRuleBuilder<T, string> rule)

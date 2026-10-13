@@ -6,7 +6,7 @@ using Microsoft.Extensions.Options;
 
 namespace Liftingo.Api.Endpoints.Account.Shared;
 
-/// <summary>The redirects the external-login callback answers with (the contract's callback table).</summary>
+/// <summary>The redirects the external-login callback answers with.</summary>
 internal sealed class FrontendRedirects(IOptions<AppOptions> appOptions)
 {
     public IResult Callback() => To("auth/callback");

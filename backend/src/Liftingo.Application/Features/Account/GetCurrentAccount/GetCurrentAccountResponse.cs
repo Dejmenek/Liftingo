@@ -4,7 +4,7 @@ namespace Liftingo.Application.Features.Account.GetCurrentAccount;
 
 /// <param name="Id">The account id.</param>
 /// <param name="Email">The account e-mail.</param>
-/// <param name="EmailVerified">Whether the e-mail is verified (FR-019).</param>
+/// <param name="EmailVerified">Whether the e-mail is verified.</param>
 /// <param name="HasPassword">Whether the account can sign in with a password.</param>
 /// <param name="Providers">The linked external providers.</param>
 public sealed record GetCurrentAccountResponse(

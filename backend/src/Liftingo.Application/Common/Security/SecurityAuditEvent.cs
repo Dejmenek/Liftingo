@@ -6,8 +6,8 @@ namespace Liftingo.Application.Common.Security;
 /// <param name="Type">What happened.</param>
 /// <param name="Outcome">How it ended.</param>
 /// <param name="OccurredAt">When it happened.</param>
-/// <param name="IpAddress">Personal data. <c>null</c> when the user id is <c>null</c> (FR-014).</param>
-/// <param name="DeviceType">Personal data. <c>null</c> when the user id is <c>null</c> (FR-014).</param>
+/// <param name="IpAddress">Personal data. <c>null</c> when the user id is <c>null</c>.</param>
+/// <param name="DeviceType">Personal data. <c>null</c> when the user id is <c>null</c>.</param>
 public sealed record SecurityAuditEvent(
     Guid? UserId,
     SecurityEventType Type,

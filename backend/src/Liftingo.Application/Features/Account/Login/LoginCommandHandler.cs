@@ -78,7 +78,7 @@ public sealed class LoginCommandHandler(
 
             default:
                 // Succeeded. The same commit persists the failed-attempt counter reset made by the password check.
-                // A device the account has not used before gets a security notice once the session exists (FR-026).
+                // A device the account has not used before gets a security notice once the session exists.
                 bool isNewDevice = await sessions.StageDeviceAsync(account.Id, client, SignInKind.SignIn, ct);
 
                 await db.SaveChangesAsync(ct);
@@ -103,7 +103,7 @@ public sealed class LoginCommandHandler(
         ClientInfo client,
         CancellationToken ct)
     {
-        // Same rules as a real account, so a lockout answer does not reveal that the address has no account (R8).
+        // Same rules as a real account, so a lockout answer does not reveal that the address has no account.
         if (await throttle.GetLockoutEndAsync(email, ct) is { } lockedUntil)
         {
             await audit.WriteAsync(null, SecurityEventType.Login, SecurityEventOutcome.LockedOut, client, ct);

@@ -4,7 +4,7 @@ namespace Liftingo.Infrastructure.Email;
 
 /// <summary>
 /// Used wherever no real transport exists yet: drops the message. The flow that asked for it still
-/// succeeds. Logs the template and the user id, never the recipient (FR-028, FR-030).
+/// succeeds. Logs the template and the user id, never the recipient.
 /// </summary>
 public sealed partial class DisabledEmailTransport(ILogger<DisabledEmailTransport> logger) : IEmailTransport
 {

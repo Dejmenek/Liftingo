@@ -2,7 +2,7 @@ namespace Liftingo.Application.Common.Security;
 
 /// <summary>
 /// What an external provider told us about the user. Api reads it from the short-lived external-login cookie and
-/// passes it to the handlers; nothing about it is stored before the user gives consent (FR-021).
+/// passes it to the handlers; nothing about it is stored before the user gives consent.
 /// </summary>
 /// <param name="Provider">The scheme name (<c>Google</c>, <c>Facebook</c>, <c>X</c>), which is also the Identity login provider.</param>
 /// <param name="ProviderKey">The user's id at the provider.</param>

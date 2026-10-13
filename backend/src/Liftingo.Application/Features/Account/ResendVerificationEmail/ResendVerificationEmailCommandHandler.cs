@@ -23,7 +23,7 @@ public sealed class ResendVerificationEmailCommandHandler(
 
         Guid userId = userContext.UserId;
 
-        // Success whatever happens, so the answer says nothing about the limit or the account state (FR-037).
+        // Success whatever happens, so the answer says nothing about the limit or the account state.
         if (await identity.GetSummaryAsync(userId, ct) is { EmailVerified: false } account
             && await emailTokens.IssueAsync(userId, EmailTokenPurpose.EmailVerification, ct) is { } token)
         {

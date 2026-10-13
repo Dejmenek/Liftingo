@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Liftingo.Application.Features.Account.LogoutAllDevices;
 
-/// <summary>Ends every session of the signed-in user, the current one included, and forgets their devices (FR-015a).</summary>
+/// <summary>Ends every session of the signed-in user, the current one included, and forgets their devices.</summary>
 public sealed class LogoutAllDevicesCommandHandler(
     IUserContext userContext,
     IApplicationDbContext db,

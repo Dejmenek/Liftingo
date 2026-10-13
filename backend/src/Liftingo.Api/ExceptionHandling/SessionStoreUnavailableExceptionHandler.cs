@@ -10,7 +10,7 @@ namespace Liftingo.Api.ExceptionHandling;
 
 /// <summary>
 /// Maps <see cref="SessionStoreUnavailableException"/> (Redis is down) to a 503 ProblemDetails response
-/// with <c>Retry-After</c> (FR-015c).
+/// with <c>Retry-After</c>.
 /// </summary>
 internal sealed partial class SessionStoreUnavailableExceptionHandler(
     IProblemDetailsService problemDetailsService,

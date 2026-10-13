@@ -14,9 +14,9 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Liftingo.Infrastructure.Identity;
 
 /// <summary>
-/// Registers the external sign-in providers (R9). A provider is registered only when both of its secrets are
+/// Registers the external sign-in providers. A provider is registered only when both of its secrets are
 /// configured, so a missing section switches the provider off instead of failing at startup. Api owns the scheme
-/// that holds the provider's result and the callback path, and passes them in (R20).
+/// that holds the provider's result and the callback path, and passes them in.
 /// </summary>
 public static class ExternalProviderOptions
 {
@@ -102,7 +102,7 @@ public static class ExternalProviderOptions
         options.SignInScheme = signInScheme;
 
         // A provider error, a cancelled consent screen or a bad state would make the handler throw. Send the browser
-        // to the callback endpoint instead, which finds no external principal and redirects to the login page (FR-020).
+        // to the callback endpoint instead, which finds no external principal and redirects to the login page.
         options.Events.OnRemoteFailure = context =>
         {
             context.Response.Redirect(callbackPath);

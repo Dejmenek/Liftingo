@@ -5,7 +5,7 @@ namespace Liftingo.Application.Features.Account.Shared;
 /// <summary>What a slice knows about the caller: network address, device label and device id.</summary>
 /// <param name="IpAddress">Personal data. Used only for audit events; never logged.</param>
 /// <param name="DeviceType">The label from <see cref="DeviceDescriptor"/>.</param>
-/// <param name="DeviceId">The client's device id, or a fresh id when it sent none (R6).</param>
+/// <param name="DeviceId">The client's device id, or a fresh id when it sent none.</param>
 public sealed record ClientInfo(string? IpAddress, string DeviceType, Guid DeviceId)
 {
     /// <param name="ipAddress">The caller's address.</param>

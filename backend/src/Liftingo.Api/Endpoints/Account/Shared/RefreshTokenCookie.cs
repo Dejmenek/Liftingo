@@ -6,7 +6,7 @@ namespace Liftingo.Api.Endpoints.Account.Shared;
 
 /// <summary>
 /// The <c>liftingo_rt</c> cookie. It is HttpOnly and only sent to the session endpoints, so page
-/// scripts never see the refresh token (FR-008a).
+/// scripts never see the refresh token.
 /// </summary>
 internal sealed class RefreshTokenCookie(IOptions<RefreshCookieOptions> options)
 {

@@ -8,7 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Liftingo.Api.IntegrationTests.Infrastructure;
 
-// Confirms research R2's "verify" item: with AutoSaveChanges = false, UserManager only stages changes.
+// With AutoSaveChanges = false, UserManager only stages changes.
 public class IdentityServiceTests(SqlServerFixture fixture) : IntegrationTestBase(fixture)
 {
     private const string Email = "anna@example.pl";

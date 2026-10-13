@@ -16,7 +16,7 @@ using ApplicationDbContext = Liftingo.Infrastructure.Persistence.ApplicationDbCo
 namespace Liftingo.Api.IntegrationTests.Features.Account;
 
 /// <summary>
-/// The welcome and new-device e-mails (US7). External-provider flows are tested manually: there is no fake provider
+/// The welcome and new-device e-mails. External-provider flows are tested manually: there is no fake provider
 /// handler, so the provider sign-up cases (welcome-only e-mail, typed provider e-mail) and provider sign-in from a new
 /// device are left out. The provider link confirmation is driven by staging its token directly.
 /// </summary>

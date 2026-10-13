@@ -10,7 +10,7 @@ using static ArchUnitNET.Fluent.ArchRuleDefinition;
 namespace Liftingo.ArchitectureTests;
 
 /// <summary>
-/// What each layer may contain, beyond which layer may reference which (R25, constitution I and II).
+/// What each layer may contain, beyond which layer may reference which.
 /// </summary>
 public partial class LayerResponsibilityTests : BaseTest
 {

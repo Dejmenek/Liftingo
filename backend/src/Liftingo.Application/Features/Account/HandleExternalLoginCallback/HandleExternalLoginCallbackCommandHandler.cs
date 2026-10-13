@@ -10,7 +10,7 @@ using Liftingo.Domain.Account;
 namespace Liftingo.Application.Features.Account.HandleExternalLoginCallback;
 
 /// <summary>
-/// Decides what happens after the provider sends the browser back (the contract's callback table). Refusals are
+/// Decides what happens after the provider sends the browser back. Refusals are
 /// errors: <see cref="ExternalLoginErrors.Failed"/>, <see cref="ExternalLoginErrors.ProviderEmailConflict"/> and
 /// <see cref="LockedOutError"/>. Api turns every outcome into a redirect.
 /// </summary>
@@ -36,7 +36,7 @@ public sealed class HandleExternalLoginCallbackCommandHandler(
         if (command.External is not { } external)
         {
             // The provider failed or the user cancelled there (OnRemoteFailure sends the browser here), or the cookie
-            // is missing, expired or does not validate. No user, so the audit record carries no IP and no device (FR-020).
+            // is missing, expired or does not validate. No user, so the audit record carries no IP and no device.
             await audit.WriteAsync(null, SecurityEventType.ExternalLogin, SecurityEventOutcome.Failed, client, ct);
 
             return Result.Failure<HandleExternalLoginCallbackResponse>(ExternalLoginErrors.Failed);
@@ -55,8 +55,8 @@ public sealed class HandleExternalLoginCallbackCommandHandler(
             return await LinkVerifiedAccountAsync(emailOwner, external, client, ct);
         }
 
-        // A new user, or the owner of an unverified address taking the account over. Both need consents first
-        // (FR-021, R10), and nothing is written until they give them.
+        // A new user, or the owner of an unverified address taking the account over. Both need consents first,
+        // and nothing is written until they give them.
         return s_consentRequired;
     }
 
@@ -66,7 +66,7 @@ public sealed class HandleExternalLoginCallbackCommandHandler(
         ClientInfo client,
         CancellationToken ct)
     {
-        // The provider now reports an address that belongs to another account (FR-022a). Nobody is signed in and
+        // The provider now reports an address that belongs to another account. Nobody is signed in and
         // neither account changes. A provider e-mail that belongs to nobody is ignored.
         if (emailOwner is not null && emailOwner.Id != linked.Id)
         {
@@ -80,7 +80,7 @@ public sealed class HandleExternalLoginCallbackCommandHandler(
             return Result.Failure<HandleExternalLoginCallbackResponse>(refused);
         }
 
-        // A device the account has not used before gets a security notice once the session exists (FR-026).
+        // A device the account has not used before gets a security notice once the session exists.
         bool isNewDevice = await sessions.StageDeviceAsync(linked.Id, client, SignInKind.SignIn, ct);
 
         await db.SaveChangesAsync(ct);
@@ -102,7 +102,7 @@ public sealed class HandleExternalLoginCallbackCommandHandler(
         ClientInfo client,
         CancellationToken ct)
     {
-        // The address was proven by whoever verified it, and the provider vouches for it too (R10): link without
+        // The address was proven by whoever verified it, and the provider vouches for it too: link without
         // a consent step. A locked account refuses, and that never counts as a failed attempt.
         if (await RefuseIfLockedOutAsync(account.Id, client, ct) is { } refused)
         {
@@ -111,7 +111,7 @@ public sealed class HandleExternalLoginCallbackCommandHandler(
 
         await identity.AddLoginAsync(account.Id, external.Provider, external.ProviderKey, external.DisplayName, ct);
 
-        // A device the account has not used before gets a security notice once the session exists (FR-026).
+        // A device the account has not used before gets a security notice once the session exists.
         bool isNewDevice = await sessions.StageDeviceAsync(account.Id, client, SignInKind.SignIn, ct);
 
         await db.SaveChangesAsync(ct);

@@ -75,7 +75,7 @@ public class SessionStoreUnavailableTests(SqlServerFixture fixture) : IAsyncLife
             await AssertUnavailableAsync(response);
         });
 
-        // SQL is committed before Redis is written (R2): nothing is rolled back.
+        // SQL is committed before Redis is written: nothing is rolled back.
         await using AsyncServiceScope scope = factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         Guid userId = await db.Users

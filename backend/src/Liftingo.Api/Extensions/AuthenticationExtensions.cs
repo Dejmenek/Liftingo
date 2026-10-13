@@ -14,7 +14,7 @@ namespace Liftingo.Api.Extensions;
 internal static class AuthenticationExtensions
 {
     /// <summary>
-    /// Decides how requests are authenticated (R20): the JWT bearer scheme by default, the short-lived external cookie
+    /// Decides how requests are authenticated: the JWT bearer scheme by default, the short-lived external cookie
     /// for a pending provider sign-in, and the provider handlers. Infrastructure supplies the provider and token
     /// configuration through <c>AddExternalProviders</c> and its JWT bearer options setup.
     /// </summary>

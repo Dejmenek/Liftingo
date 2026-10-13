@@ -9,7 +9,7 @@ using StackExchange.Redis;
 
 namespace Liftingo.Api.IntegrationTests.Infrastructure;
 
-// Runs the real Lua script against the Redis container (R21). The throttle gets its own fake clock, so the
+// Runs the real Lua script against the Redis container. The throttle gets its own fake clock, so the
 // lockout can run out without waiting. Redis' own TTL follows the real clock, which is never behind the fake one.
 public sealed class RedisLoginThrottleTests : IntegrationTestBase, IDisposable
 {

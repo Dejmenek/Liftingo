@@ -14,7 +14,7 @@ using Serilog.Events;
 namespace Liftingo.Api.IntegrationTests.Features.Account;
 
 /// <summary>
-/// FR-030: no e-mail, password, token or IP address in a log event. Each test builds its own host, because
+/// No e-mail, password, token or IP address in a log event. Each test builds its own host, because
 /// Serilog's bootstrap logger is process-wide and a shared host's collector would not see these events.
 /// </summary>
 public class LogPrivacyTests(SqlServerFixture fixture) : IntegrationTestBase(fixture)

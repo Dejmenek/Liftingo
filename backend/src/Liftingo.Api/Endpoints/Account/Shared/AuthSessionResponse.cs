@@ -3,8 +3,8 @@ using Liftingo.Application.Common.Security;
 namespace Liftingo.Api.Endpoints.Account.Shared;
 
 /// <summary>
-/// The body of every endpoint that signs a user in (contract: <c>AuthSession</c>). It is the HTTP contract those
-/// endpoints share, not an Application response (R22). The refresh token never appears here: it goes in the cookie.
+/// The body of every endpoint that signs a user in. It is the HTTP contract those
+/// endpoints share, not an Application response. The refresh token never appears here: it goes in the cookie.
 /// </summary>
 public sealed record AuthSessionResponse(string AccessToken, DateTimeOffset AccessTokenExpiresAt, AccountResponse Account)
 {
