@@ -5,7 +5,6 @@ namespace Liftingo.Application.Common.Security;
 /// refresh token in the HttpOnly cookie; Application never touches either transport.
 /// </summary>
 /// <param name="AccessToken">The short-lived JWT.</param>
-/// <param name="AccessTokenExpiresAt">When the JWT expires.</param>
 /// <param name="Account">The signed-in account as it is now.</param>
 /// <param name="RefreshToken">The opaque refresh token. Never logged, never in a response body.</param>
 /// <param name="RefreshTokenLifetime">How long the session has left, so the cookie expires with it.</param>

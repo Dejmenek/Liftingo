@@ -9,7 +9,6 @@ namespace Liftingo.Application.Features.Account.CompleteExternalLogin;
 /// <param name="AcceptMarketing">Optional.</param>
 /// <param name="Email">Needed only when the provider gave no e-mail (<c>emailRequired</c> in the pending response).</param>
 /// <param name="External">The pending provider sign-in, or <c>null</c> when there is none or it expired.</param>
-/// <param name="Client">The caller's device and address.</param>
 public sealed record CompleteExternalLoginCommand(
     bool AcceptTermsAndAge,
     bool AcceptHealthData,

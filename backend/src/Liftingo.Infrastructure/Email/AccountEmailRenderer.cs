@@ -61,7 +61,6 @@ public sealed class AccountEmailRenderer(IOptions<AppOptions> appOptions, IOptio
         };
     }
 
-    // Verification link doubling as the welcome e-mail.
     private EmailMessage VerificationAndWelcome(VerificationAndWelcomeEmail email)
     {
         string link = Link("auth/verify-email", email.Token);
@@ -83,7 +82,6 @@ public sealed class AccountEmailRenderer(IOptions<AppOptions> appOptions, IOptio
         return new EmailMessage(email.To, subject, html, text, VerificationAndWelcomeTemplate, email.UserId);
     }
 
-    // Verification link without the welcome text, for a resend.
     private EmailMessage Verification(VerificationEmail email)
     {
         string link = Link("auth/verify-email", email.Token);
@@ -125,7 +123,6 @@ public sealed class AccountEmailRenderer(IOptions<AppOptions> appOptions, IOptio
         return new EmailMessage(email.To, subject, html, text, PasswordResetTemplate, email.UserId);
     }
 
-    // Asks the owner of an address to confirm that a sign-in provider may be linked to the account.
     private EmailMessage ProviderLinkConfirmation(ProviderLinkConfirmationEmail email)
     {
         string link = Link("auth/confirm-link", email.Token);
@@ -147,7 +144,6 @@ public sealed class AccountEmailRenderer(IOptions<AppOptions> appOptions, IOptio
         return new EmailMessage(email.To, subject, html, text, ProviderLinkConfirmationTemplate, email.UserId);
     }
 
-    // Welcome without a link, for an account whose e-mail the provider already vouched for.
     private static EmailMessage Welcome(WelcomeEmail email)
     {
         const string subject = "Witaj w Liftingo";

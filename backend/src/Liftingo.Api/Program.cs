@@ -38,7 +38,6 @@ try
 
     app.UseSerilogLogging();
 
-    // Configure the HTTP request pipeline.
     if (app.Environment.IsDevelopment())
     {
         app.MapOpenApi().WithDocumentPerVersion();

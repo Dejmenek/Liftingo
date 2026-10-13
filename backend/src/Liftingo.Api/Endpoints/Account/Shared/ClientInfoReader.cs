@@ -7,7 +7,6 @@ internal static class ClientInfoReader
 {
     public const string DeviceIdHeader = "X-Device-Id";
 
-    /// <param name="http">The current request.</param>
     /// <param name="deviceIdOverride">A device id from somewhere other than the header; wins over it when given.</param>
     public static ClientInfo Read(HttpContext http, Guid? deviceIdOverride = null)
     {

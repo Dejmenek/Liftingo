@@ -8,8 +8,6 @@ namespace Liftingo.Application.Features.Account.Shared;
 /// <param name="DeviceId">The client's device id, or a fresh id when it sent none.</param>
 public sealed record ClientInfo(string? IpAddress, string DeviceType, Guid DeviceId)
 {
-    /// <param name="ipAddress">The caller's address.</param>
-    /// <param name="userAgent">The User-Agent header.</param>
     /// <param name="deviceIdHeader">The raw device id header. A missing or malformed one counts as a new device.</param>
     /// <param name="deviceIdOverride">
     /// A device id from somewhere other than the header (e.g. the start of an external sign-in). Wins over the
