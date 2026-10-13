@@ -70,6 +70,19 @@ These rules are enforced by `Liftingo.ArchitectureTests`.
 
 A **command** changes state. A **query** only reads and never writes. Each has a handler class that is registered in DI and injected straight into its endpoint (or Hangfire job). There is no mediator, dispatcher or pipeline in between.
 
+The interfaces in `Application/Common/Messaging/` fix the shapes:
+
+| Type | Implements | `HandleAsync` returns |
+|---|---|---|
+| Command with no data back | `ICommand` | |
+| Command with a response | `ICommand<TResponse>` | |
+| Query | `IQuery<TResponse>` | |
+| Handler of `ICommand` | `ICommandHandler<TCommand>` | `Task<Result>` |
+| Handler of `ICommand<TResponse>` | `ICommandHandler<TCommand, TResponse>` | `Task<Result<TResponse>>` |
+| Handler of `IQuery<TResponse>` | `IQueryHandler<TQuery, TResponse>` | `Task<Result<TResponse>>` |
+
+`AddApplication` registers each handler against its handler interface, and the endpoint injects that interface (`ICommandHandler<RenamePlanCommand, RenamePlanResponse>`). Nothing else is registered against them, so there is no dispatcher and no place for decorators.
+
 The handler is where the whole use case can be read from top to bottom. It calls these explicitly, in the order the use case needs them:
 
 1. its validator,
@@ -120,7 +133,7 @@ Sharing between slices:
 
 ```csharp
 // Liftingo.Application/Features/Plans/RenamePlan/RenamePlanCommand.cs
-public sealed record RenamePlanCommand(Guid PlanId, string Name);
+public sealed record RenamePlanCommand(Guid PlanId, string Name) : ICommand<RenamePlanResponse>;
 
 // Liftingo.Application/Features/Plans/RenamePlan/RenamePlanResponse.cs
 public sealed record RenamePlanResponse(Guid PlanId, string Name);
@@ -130,7 +143,7 @@ public sealed class RenamePlanCommandHandler(
     IApplicationDbContext db,
     ICurrentUser currentUser,
     RenamePlanCommandValidator validator,
-    ILogger<RenamePlanCommandHandler> logger)
+    ILogger<RenamePlanCommandHandler> logger) : ICommandHandler<RenamePlanCommand, RenamePlanResponse>
 {
     public async Task<Result<RenamePlanResponse>> HandleAsync(RenamePlanCommand command, CancellationToken ct)
     {
@@ -157,7 +170,10 @@ public sealed record RenamePlanRequest(string Name);
 
 // Liftingo.Api/Endpoints/Plans/RenamePlanEndpoint.cs
 app.MapPut(RouteConsts.Plans.Rename, async (
-        Guid planId, RenamePlanRequest body, RenamePlanCommandHandler handler, CancellationToken ct) =>
+        Guid planId,
+        RenamePlanRequest body,
+        ICommandHandler<RenamePlanCommand, RenamePlanResponse> handler,
+        CancellationToken ct) =>
     {
         var result = await handler.HandleAsync(new RenamePlanCommand(planId, body.Name), ct);
         return result.IsSuccess ? Results.Ok(result.Value) : result.ToProblem();
@@ -196,13 +212,15 @@ Any other exception becomes a generic 500 with no message.
 - Nullable reference types enabled.
 - Handlers and endpoints are `async` and accept a `CancellationToken`.
 - Validators are injected into the handler and called explicitly at the start of `HandleAsync`.
+- Comments explain why the code is the way it is. Don't write a comment that repeats the code or the member's name (`/// <param name="Password">The password.</param>`), that describes how the code used to work, or that cites a requirement id (`FR-021`, `R17`, `SC-008`). Ids belong in the spec. Write the reason itself in the comment.
+- Analyzer rules: when a rule doesn't fit how this codebase is built, turn it off for the whole backend in `.editorconfig`, with a comment that names the rule and says why. Don't suppress the same rule in place after place. Keep `[SuppressMessage]` (with a `Justification`) or `#pragma warning disable` for a one-off exception to a rule that is worth keeping, e.g. the catch-all in `SecurityAudit.WriteAsync`. A path-scoped section is for a rule that still catches real mistakes elsewhere, e.g. CA1707 only in test files.
 - Test naming: `[Method]_[Scenario]_[ExpectedResult]`.
 - Log messages must not contain e-mail addresses, names, body data or set values. Log the user id to identify a user.
 
 ## Patterns we use
 
 - Clean Architecture layering with vertical slices: `Domain` ← `Application` ← `Infrastructure`/`Api`, grouped by product module.
-- CQRS without a mediator: command and query handlers injected directly into endpoints and jobs.
+- CQRS without a mediator: commands, queries and handlers implement the `Common/Messaging` interfaces, and endpoints and jobs inject the handler interface directly.
 - Ports and adapters: `Application` defines the interfaces, `Infrastructure` implements them.
 - `Result<T>` as the return type for all handlers; no throwing for expected/business failures.
 - `IApplicationDbContext` queried directly with LINQ.
@@ -237,7 +255,7 @@ Integration test infrastructure lives in `tests/Liftingo.Api.IntegrationTests/In
 
 Unit tests mirror the source folders. For example, the validator of `Features/Account/Register/` is tested in `Features/Account/Register/RegisterCommandValidatorTests.cs`.
 
-`Liftingo.ArchitectureTests` has two kinds of rules. `LayerDependencyTests` and `DependencyGuardTests` check which layer may reference which. `LayerResponsibilityTests` checks what each layer may contain: Application references only its allowed assemblies, has no endpoints, and has only command and query handlers in use-case folders that never call each other. Api uses Infrastructure only in its wiring classes and never touches `IApplicationDbContext`.
+`Liftingo.ArchitectureTests` has two kinds of rules. `LayerDependencyTests` and `DependencyGuardTests` check which layer may reference which. `LayerResponsibilityTests` checks what each layer may contain: Application references only its allowed assemblies, has no endpoints, and has only command and query handlers in use-case folders that never call each other. Every `…CommandHandler`, `…QueryHandler`, `…Command` and `…Query` implements the interface its name says. Api uses Infrastructure only in its wiring classes and never touches `IApplicationDbContext`.
 
 Test groups (xUnit collections) never run in parallel (`[assembly: Parallelization(Mode = ParallelMode.None)]`), and tests inside a group run one at a time. Integration tests need Docker running.
 
