@@ -283,24 +283,32 @@ dotnet_diagnostic.CA1716.severity = none
 # hierarchies such as RotationResult keep their cases inside the abstract record.
 dotnet_diagnostic.CA1034.severity = none
 
+# CA1724: Type names should not match namespaces.
+# The Result type lives in the Common/Result folder on purpose, next to Error and ValidationError.
+dotnet_diagnostic.CA1724.severity = none
+
+# CA2225: Operator overloads have named alternates.
+# Only matters to languages without operators. Result's implicit conversions keep handlers short, and nothing
+# here is consumed from such a language.
+dotnet_diagnostic.CA2225.severity = none
+
+# CA1040: Avoid empty interfaces.
+# ICommand and IQuery<TResponse> are marker interfaces on purpose: handler constraints depend on them.
+dotnet_diagnostic.CA1040.severity = none
+
 # CA1707: Identifiers should not contain underscores.
 # backend/AGENTS.md mandates [Method]_[Scenario]_[ExpectedResult] for test names, so
 # it's disabled for test files only (mirrors the "Tests" file-name suffix from AGENTS.md).
 [*Tests.cs]
 dotnet_diagnostic.CA1707.severity = none
 
-# Result<T> pattern (Common/Result): a known, deliberately-shaped implementation
-# (Result/Result<TValue>/Error/ErrorType/ValidationError) that trades a few CA rules
-# for the ergonomics that make the pattern worth using.
+# Result<T> pattern (Common/Result): static factories on Result<TValue> are the point of the pattern.
 [**/Common/Result/*.cs]
-dotnet_diagnostic.CA1724.severity = none  # Result/Error living in a "Result" namespace is intentional
-dotnet_diagnostic.CA1000.severity = none  # static factories on Result<TValue> are the point of the pattern
-dotnet_diagnostic.CA2225.severity = none  # implicit conversions are the point; Success/Failure are the named alternates
+dotnet_diagnostic.CA1000.severity = none
 
-# Command and query markers (Common/Messaging): they are empty on purpose, and the type parameter only
-# ties a command or query to the response its handler returns.
+# Command and query markers (Common/Messaging): the type parameter only ties a command or query to the
+# response its handler returns.
 [**/Common/Messaging/{ICommand,IQuery}.cs]
-dotnet_diagnostic.CA1040.severity = none
 dotnet_diagnostic.S2326.severity = none
 
 dotnet_naming_style.begins_with_i.required_prefix = I
