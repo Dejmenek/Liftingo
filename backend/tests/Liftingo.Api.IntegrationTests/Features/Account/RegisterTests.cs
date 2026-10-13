@@ -4,7 +4,7 @@ using System.Text.Json;
 
 using Liftingo.Api.IntegrationTests.Infrastructure;
 using Liftingo.Api.IntegrationTests.Infrastructure.Fakers;
-using Liftingo.Application.Common.Email;
+using Liftingo.Infrastructure.Email;
 using Liftingo.Application.Common.Security;
 using Liftingo.Application.Features.Account.Shared;
 using Liftingo.Domain.Account;
@@ -92,7 +92,7 @@ public class RegisterTests(SqlServerFixture fixture) : IntegrationTestBase(fixtu
 
         // Exactly one e-mail: verification + welcome. A registration never sends the new-device e-mail.
         EmailMessage email = Assert.Single(Factory.Emails.Messages);
-        Assert.Equal(AccountEmails.VerificationAndWelcomeTemplate, email.TemplateName);
+        Assert.Equal(AccountEmailRenderer.VerificationAndWelcomeTemplate, email.TemplateName);
         Assert.Equal(request.Email, email.To);
         Assert.Equal(session.Account.Id, email.UserId);
 
@@ -260,7 +260,7 @@ public class RegisterTests(SqlServerFixture fixture) : IntegrationTestBase(fixtu
 
         LogEvent failure = Assert.Single(
             factory.Logs.Events,
-            e => PropertyValue(e, "TemplateName") is string name && name == AccountEmails.VerificationAndWelcomeTemplate);
+            e => PropertyValue(e, "TemplateName") is string name && name == AccountEmailRenderer.VerificationAndWelcomeTemplate);
         Assert.Equal(session.Account.Id, PropertyValue(failure, "UserId"));
         Assert.DoesNotContain(
             factory.Logs.Events,

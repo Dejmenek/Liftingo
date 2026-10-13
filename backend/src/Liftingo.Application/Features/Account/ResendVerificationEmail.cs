@@ -1,8 +1,10 @@
 using Liftingo.Application.Common;
+using Liftingo.Application.Common.Email;
 using Liftingo.Application.Common.Persistence;
 using Liftingo.Application.Common.Routes;
 using Liftingo.Application.Common.Security;
 using Liftingo.Application.Features.Account.Shared;
+using Liftingo.Application.Features.Account.Shared.Emails;
 using Liftingo.Domain.Account;
 
 using Microsoft.AspNetCore.Builder;
@@ -27,7 +29,7 @@ public sealed class ResendVerificationEmail : IEndpoint
         IIdentityService identity,
         IApplicationDbContext db,
         EmailTokenIssuer emailTokens,
-        AccountEmails emails,
+        IEmailSender emails,
         CancellationToken ct)
     {
         Guid userId = userContext.UserId;
@@ -37,7 +39,7 @@ public sealed class ResendVerificationEmail : IEndpoint
             && await emailTokens.IssueAsync(userId, EmailTokenPurpose.EmailVerification, ct) is { } token)
         {
             await db.SaveChangesAsync(ct);
-            await emails.SendVerificationAsync(userId, account.Email, token, ct);
+            await emails.SendAsync(new VerificationEmail(userId, account.Email, token), ct);
         }
 
         return Results.Accepted();

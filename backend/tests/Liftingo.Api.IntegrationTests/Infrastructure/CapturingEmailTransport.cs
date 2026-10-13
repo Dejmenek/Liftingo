@@ -1,9 +1,12 @@
-using Liftingo.Application.Common.Email;
+using Liftingo.Infrastructure.Email;
 
 namespace Liftingo.Api.IntegrationTests.Infrastructure;
 
-/// <summary>Replaces <see cref="IEmailSender"/> in tests: remembers every message instead of sending it.</summary>
-public sealed class CapturingEmailSender : IEmailSender
+/// <summary>
+/// Replaces <see cref="IEmailTransport"/> in tests: remembers every rendered message instead of sending it, so tests
+/// see the subject, body and links the real renderer produced.
+/// </summary>
+public sealed class CapturingEmailTransport : IEmailTransport
 {
     private readonly List<EmailMessage> _messages = [];
     private readonly Lock _lock = new();
@@ -26,7 +29,7 @@ public sealed class CapturingEmailSender : IEmailSender
     {
         if (ThrowOnSend)
         {
-            throw new InvalidOperationException("The test e-mail sender is set to fail.");
+            throw new InvalidOperationException("The test e-mail transport is set to fail.");
         }
 
         lock (_lock)

@@ -14,7 +14,6 @@ public static class ApplicationExtensions
         services.AddSingleton<RefreshTokenCookie>();
         services.AddScoped<SessionIssuer>();
         services.AddScoped<SecurityAudit>();
-        services.AddScoped<AccountEmails>();
         services.AddScoped<EmailTokenIssuer>();
         services.AddScoped<ConsentRecorder>();
         services.AddScoped<AccountTakeover>();

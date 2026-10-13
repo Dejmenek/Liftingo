@@ -2,11 +2,13 @@ using FluentValidation;
 using FluentValidation.Results;
 
 using Liftingo.Application.Common.Exceptions;
+using Liftingo.Application.Common.Email;
 using Liftingo.Application.Common.Persistence;
 using Liftingo.Application.Common.Result;
 using Liftingo.Application.Common.Routes;
 using Liftingo.Application.Common.Security;
 using Liftingo.Application.Features.Account.Shared;
+using Liftingo.Application.Features.Account.Shared.Emails;
 using Liftingo.Domain.Account;
 
 using Microsoft.AspNetCore.Builder;
@@ -73,7 +75,7 @@ public sealed class CompleteExternalLogin : IEndpoint
         SessionIssuer sessions,
         EmailTokenIssuer emailTokens,
         AccountTakeover takeover,
-        AccountEmails emails,
+        IEmailSender emails,
         SecurityAudit audit,
         TimeProvider timeProvider,
         CancellationToken ct)
@@ -114,7 +116,7 @@ public sealed class CompleteExternalLogin : IEndpoint
         if (providerEmail)
         {
             return await LinkAccountAsync(
-                request, http, pending, existing, identity, db, sessions, takeover, emails, audit, client, ct);
+                request, http, pending, existing, identity, db, sessions, takeover, emails, timeProvider, audit, client, ct);
         }
 
         // The address was typed in: the owner has to confirm by e-mail before anything is linked (FR-023a, R17).
@@ -132,7 +134,7 @@ public sealed class CompleteExternalLogin : IEndpoint
         ConsentRecorder consents,
         SessionIssuer sessions,
         EmailTokenIssuer emailTokens,
-        AccountEmails emails,
+        IEmailSender emails,
         TimeProvider timeProvider,
         ClientInfo client,
         CancellationToken ct)
@@ -178,11 +180,11 @@ public sealed class CompleteExternalLogin : IEndpoint
         // e-mail gets the welcome-only e-mail instead (FR-025).
         if (verificationToken is not null)
         {
-            await emails.SendVerificationAndWelcomeAsync(userId, email, verificationToken, ct);
+            await emails.SendAsync(new VerificationAndWelcomeEmail(userId, email, verificationToken), ct);
         }
         else
         {
-            await emails.SendWelcomeAsync(userId, email, ct);
+            await emails.SendAsync(new WelcomeEmail(userId, email), ct);
         }
 
         return Results.Json(response, statusCode: StatusCodes.Status201Created);
@@ -197,7 +199,8 @@ public sealed class CompleteExternalLogin : IEndpoint
         IApplicationDbContext db,
         SessionIssuer sessions,
         AccountTakeover takeover,
-        AccountEmails emails,
+        IEmailSender emails,
+        TimeProvider timeProvider,
         SecurityAudit audit,
         ClientInfo client,
         CancellationToken ct)
@@ -240,7 +243,7 @@ public sealed class CompleteExternalLogin : IEndpoint
 
         if (isNewDevice)
         {
-            await emails.SendNewDeviceAsync(account.Id, account.Email, client.DeviceType, ct);
+            await emails.SendAsync(new NewDeviceEmail(account.Id, account.Email, timeProvider.GetUtcNow(), client.DeviceType), ct);
         }
 
         return Results.Ok(response);
@@ -252,7 +255,7 @@ public sealed class CompleteExternalLogin : IEndpoint
         AccountSummary account,
         IApplicationDbContext db,
         EmailTokenIssuer emailTokens,
-        AccountEmails emails,
+        IEmailSender emails,
         CancellationToken ct)
     {
         // The consents that came with the request are not recorded: the account has its own, and whoever opens the
@@ -267,7 +270,7 @@ public sealed class CompleteExternalLogin : IEndpoint
 
         if (token is not null)
         {
-            await emails.SendProviderLinkConfirmationAsync(account.Id, account.Email, pending.Provider, token, ct);
+            await emails.SendAsync(new ProviderLinkConfirmationEmail(account.Id, account.Email, pending.Provider, token), ct);
         }
 
         await PendingExternalLogin.ClearAsync(http);

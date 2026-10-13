@@ -2,11 +2,13 @@ using FluentValidation;
 using FluentValidation.Results;
 
 using Liftingo.Application.Common.Exceptions;
+using Liftingo.Application.Common.Email;
 using Liftingo.Application.Common.Persistence;
 using Liftingo.Application.Common.Result;
 using Liftingo.Application.Common.Routes;
 using Liftingo.Application.Common.Security;
 using Liftingo.Application.Features.Account.Shared;
+using Liftingo.Application.Features.Account.Shared.Emails;
 using Liftingo.Domain.Account;
 
 using Microsoft.AspNetCore.Builder;
@@ -61,7 +63,7 @@ public sealed class Register : IEndpoint
         ConsentRecorder consents,
         SessionIssuer sessions,
         EmailTokenIssuer emailTokens,
-        AccountEmails emails,
+        IEmailSender emails,
         TimeProvider timeProvider,
         CancellationToken ct)
     {
@@ -116,7 +118,7 @@ public sealed class Register : IEndpoint
 
         if (verificationToken is not null)
         {
-            await emails.SendVerificationAndWelcomeAsync(userId, email, verificationToken, ct);
+            await emails.SendAsync(new VerificationAndWelcomeEmail(userId, email, verificationToken), ct);
         }
 
         return Results.Json(response, statusCode: StatusCodes.Status201Created);

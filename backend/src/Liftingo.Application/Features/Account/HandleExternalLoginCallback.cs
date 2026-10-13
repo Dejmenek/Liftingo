@@ -1,7 +1,9 @@
+using Liftingo.Application.Common.Email;
 using Liftingo.Application.Common.Persistence;
 using Liftingo.Application.Common.Routes;
 using Liftingo.Application.Common.Security;
 using Liftingo.Application.Features.Account.Shared;
+using Liftingo.Application.Features.Account.Shared.Emails;
 using Liftingo.Domain.Account;
 
 using Microsoft.AspNetCore.Builder;
@@ -24,7 +26,8 @@ public sealed class HandleExternalLoginCallback : IEndpoint
         IIdentityService identity,
         IApplicationDbContext db,
         SessionIssuer sessions,
-        AccountEmails emails,
+        IEmailSender emails,
+        TimeProvider timeProvider,
         SecurityAudit audit,
         FrontendRedirects redirects,
         CancellationToken ct)
@@ -48,12 +51,12 @@ public sealed class HandleExternalLoginCallback : IEndpoint
 
         if (linked is not null)
         {
-            return await SignInLinkedAccountAsync(http, linked, emailOwner, identity, db, sessions, emails, audit, redirects, client, ct);
+            return await SignInLinkedAccountAsync(http, linked, emailOwner, identity, db, sessions, emails, timeProvider, audit, redirects, client, ct);
         }
 
         if (emailOwner is { EmailVerified: true })
         {
-            return await LinkVerifiedAccountAsync(http, emailOwner, pending, identity, db, sessions, emails, audit, redirects, client, ct);
+            return await LinkVerifiedAccountAsync(http, emailOwner, pending, identity, db, sessions, emails, timeProvider, audit, redirects, client, ct);
         }
 
         // A new user, or the owner of an unverified address taking the account over. Both need consents first
@@ -68,7 +71,8 @@ public sealed class HandleExternalLoginCallback : IEndpoint
         IIdentityService identity,
         IApplicationDbContext db,
         SessionIssuer sessions,
-        AccountEmails emails,
+        IEmailSender emails,
+        TimeProvider timeProvider,
         SecurityAudit audit,
         FrontendRedirects redirects,
         ClientInfo client,
@@ -100,7 +104,7 @@ public sealed class HandleExternalLoginCallback : IEndpoint
 
         if (isNewDevice)
         {
-            await emails.SendNewDeviceAsync(linked.Id, linked.Email, client.DeviceType, ct);
+            await emails.SendAsync(new NewDeviceEmail(linked.Id, linked.Email, timeProvider.GetUtcNow(), client.DeviceType), ct);
         }
 
         return redirects.Callback();
@@ -113,7 +117,8 @@ public sealed class HandleExternalLoginCallback : IEndpoint
         IIdentityService identity,
         IApplicationDbContext db,
         SessionIssuer sessions,
-        AccountEmails emails,
+        IEmailSender emails,
+        TimeProvider timeProvider,
         SecurityAudit audit,
         FrontendRedirects redirects,
         ClientInfo client,
@@ -140,7 +145,7 @@ public sealed class HandleExternalLoginCallback : IEndpoint
 
         if (isNewDevice)
         {
-            await emails.SendNewDeviceAsync(account.Id, account.Email, client.DeviceType, ct);
+            await emails.SendAsync(new NewDeviceEmail(account.Id, account.Email, timeProvider.GetUtcNow(), client.DeviceType), ct);
         }
 
         return redirects.Callback();

@@ -1,11 +1,13 @@
 using FluentValidation;
 using FluentValidation.Results;
 
+using Liftingo.Application.Common.Email;
 using Liftingo.Application.Common.Persistence;
 using Liftingo.Application.Common.Result;
 using Liftingo.Application.Common.Routes;
 using Liftingo.Application.Common.Security;
 using Liftingo.Application.Features.Account.Shared;
+using Liftingo.Application.Features.Account.Shared.Emails;
 using Liftingo.Domain.Account;
 
 using Microsoft.AspNetCore.Builder;
@@ -38,7 +40,7 @@ public sealed class ForgotPassword : IEndpoint
         IIdentityService identity,
         IApplicationDbContext db,
         EmailTokenIssuer emailTokens,
-        AccountEmails emails,
+        IEmailSender emails,
         CancellationToken ct)
     {
         ValidationResult validation = await s_validator.ValidateAsync(request, ct);
@@ -52,7 +54,7 @@ public sealed class ForgotPassword : IEndpoint
             && await emailTokens.IssueAsync(account.Id, EmailTokenPurpose.PasswordReset, ct) is { } token)
         {
             await db.SaveChangesAsync(ct);
-            await emails.SendPasswordResetAsync(account.Id, account.Email, token, ct);
+            await emails.SendAsync(new PasswordResetEmail(account.Id, account.Email, token), ct);
         }
 
         return Results.Accepted();

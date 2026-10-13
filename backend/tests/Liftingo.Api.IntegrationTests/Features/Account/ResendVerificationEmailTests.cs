@@ -1,7 +1,7 @@
 using System.Net;
 
 using Liftingo.Api.IntegrationTests.Infrastructure;
-using Liftingo.Application.Common.Email;
+using Liftingo.Infrastructure.Email;
 using Liftingo.Application.Common.Routes;
 using Liftingo.Application.Features.Account.Shared;
 
@@ -19,7 +19,7 @@ public class ResendVerificationEmailTests(SqlServerFixture fixture) : Integratio
 
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
         EmailMessage message = Assert.Single(Factory.Emails.Messages);
-        Assert.Equal(AccountEmails.VerificationTemplate, message.TemplateName);
+        Assert.Equal(AccountEmailRenderer.VerificationTemplate, message.TemplateName);
         Assert.Equal(session.Account.Id, message.UserId);
         Assert.Equal(session.Account.Email, message.To);
         Assert.DoesNotContain("Twoje konto jest gotowe", message.TextBody, StringComparison.Ordinal);

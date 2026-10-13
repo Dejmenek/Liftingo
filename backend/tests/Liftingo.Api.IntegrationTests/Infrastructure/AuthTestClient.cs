@@ -3,7 +3,7 @@ using System.Net.Http.Json;
 using System.Text.RegularExpressions;
 
 using Liftingo.Api.IntegrationTests.Infrastructure.Fakers;
-using Liftingo.Application.Common.Email;
+using Liftingo.Infrastructure.Email;
 using Liftingo.Application.Common.Routes;
 using Liftingo.Application.Features.Account.Shared;
 

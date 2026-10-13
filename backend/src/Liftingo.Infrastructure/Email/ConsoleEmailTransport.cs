@@ -1,5 +1,3 @@
-using Liftingo.Application.Common.Email;
-
 using Microsoft.Extensions.Logging;
 
 namespace Liftingo.Infrastructure.Email;
@@ -9,7 +7,7 @@ namespace Liftingo.Infrastructure.Email;
 /// enricher masks the recipient and any address in the body, so find the e-mail by subject and
 /// template name.
 /// </summary>
-public sealed partial class ConsoleEmailSender(ILoggerFactory loggerFactory) : IEmailSender
+public sealed partial class ConsoleEmailTransport(ILoggerFactory loggerFactory) : IEmailTransport
 {
     public const string LoggerCategory = "Liftingo.DevEmail";
 
