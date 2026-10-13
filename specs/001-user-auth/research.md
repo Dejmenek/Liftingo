@@ -738,9 +738,16 @@ live in the shared session store, never in process memory.
   explicitly: `SessionIssuer` (without the cookie), `SecurityAudit`, `EmailTokenIssuer`,
   `ConsentRecorder`, `AccountTakeover`, `DeviceDescriptor`, `ClientInfo`,
   `AccountValidationRules`. The e-mail records of R24 live in `Shared/Emails/`.
-- **Registration**: `AddApplication` scans the Application assembly and registers every class
-  whose name ends in `CommandHandler` or `QueryHandler`, and every `IValidator<T>`
-  implementation, as scoped services. It uses only `Microsoft.Extensions.DependencyInjection.Abstractions`
+- **Interfaces**: `Application/Common/Messaging/` holds `ICommand`, `ICommand<TResponse>`,
+  `IQuery<TResponse>`, `ICommandHandler<TCommand>` (returns `Result`),
+  `ICommandHandler<TCommand, TResponse>` and `IQueryHandler<TQuery, TResponse>` (both return
+  `Result<TResponse>`). Every command, query and handler implements the matching one. They fix
+  the handler signature; they are not a mediator, and nothing dispatches through them.
+- **Registration**: `AddApplication` scans the Application assembly and registers every handler
+  against the handler interface it implements, and every `IValidator<T>` implementation as its
+  concrete type, all scoped. Endpoints inject the handler interface, e.g.
+  `ICommandHandler<LoginCommand, LoginResponse>`. Nothing else is registered against these
+  interfaces: no decorators. It uses only `Microsoft.Extensions.DependencyInjection.Abstractions`
   (no Scrutor, no FluentValidation DI package).
 
 ## R23. Validation, transactions, logging and audit inside the handler (rev. e)
@@ -809,9 +816,11 @@ live in the shared session store, never in process memory.
      exact transitive names are *verify* on the first build.
   2. Application types do not depend on `Microsoft.AspNetCore.*`, `Microsoft.Extensions.Caching.*`,
      `StackExchange.Redis` or `Microsoft.EntityFrameworkCore.SqlServer`.
-  3. Application has no type whose name ends in `Endpoint`; every class ending in `Handler` ends in
-     `CommandHandler` or `QueryHandler` and sits in a `Features.{Module}.{UseCase}` namespace.
-  4. A handler does not depend on another handler.
+  3. Application has no type whose name ends in `Endpoint`; every handler sits in a
+     `Features.{Module}.{UseCase}` namespace. A `…CommandHandler` implements `ICommandHandler`, a
+     `…QueryHandler` implements `IQueryHandler`, a `…Command` implements `ICommand` and a `…Query`
+     implements `IQuery`, and nothing else does.
+  4. A handler does not depend on another handler, by concrete type or by handler interface.
   5. `Api` types other than `Program` and the classes in `Liftingo.Api.Extensions` do not depend on
      `Liftingo.Infrastructure` (DI wiring only), and no `Api` type depends on
      `IApplicationDbContext`.
