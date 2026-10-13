@@ -1,10 +1,7 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace Liftingo.Api.Endpoints;
 
 public static class RouteConsts
 {
-    [SuppressMessage("Design", "CA1034:Nested types should not be visible", Justification = "Routes are grouped per module under RouteConsts, e.g. RouteConsts.Auth.Login.")]
     public static class Auth
     {
         // Prefix of the routes that receive the refresh-token cookie; it becomes the cookie path.
