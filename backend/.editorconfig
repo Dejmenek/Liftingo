@@ -273,6 +273,16 @@ dotnet_diagnostic.CA1812.severity = none
 # public, and the rule would push the rest of the app to hide types for no benefit.
 dotnet_diagnostic.CA1515.severity = none
 
+# CA1716: Identifiers should not match keywords.
+# It flags the Shared folders (Features/{Module}/Shared, Endpoints/{Module}/Shared) because Shared is a VB
+# keyword, and names such as Error. Nothing here is consumed from VB.
+dotnet_diagnostic.CA1716.severity = none
+
+# CA1034: Nested types should not be visible.
+# Nesting is used on purpose: RouteConsts groups routes per module (RouteConsts.Auth.Login), and closed result
+# hierarchies such as RotationResult keep their cases inside the abstract record.
+dotnet_diagnostic.CA1034.severity = none
+
 # CA1707: Identifiers should not contain underscores.
 # backend/AGENTS.md mandates [Method]_[Scenario]_[ExpectedResult] for test names, so
 # it's disabled for test files only (mirrors the "Tests" file-name suffix from AGENTS.md).
@@ -283,16 +293,9 @@ dotnet_diagnostic.CA1707.severity = none
 # (Result/Result<TValue>/Error/ErrorType/ValidationError) that trades a few CA rules
 # for the ergonomics that make the pattern worth using.
 [**/Common/Result/*.cs]
-dotnet_diagnostic.CA1716.severity = none  # Error is the clearest name for this type
 dotnet_diagnostic.CA1724.severity = none  # Result/Error living in a "Result" namespace is intentional
 dotnet_diagnostic.CA1000.severity = none  # static factories on Result<TValue> are the point of the pattern
 dotnet_diagnostic.CA2225.severity = none  # implicit conversions are the point; Success/Failure are the named alternates
-
-# Closed result hierarchies (RotationResult, PasswordCheckResult): the cases are nested in the abstract
-# record on purpose. Its private constructor stops anything else from deriving, and callers read the
-# cases as RotationResult.Rotated, PasswordCheckResult.Failed, and so on.
-[**/Common/Security/{RotationResult,PasswordCheckResult}.cs]
-dotnet_diagnostic.CA1034.severity = none
 
 # Command and query markers (Common/Messaging): they are empty on purpose, and the type parameter only
 # ties a command or query to the response its handler returns.
