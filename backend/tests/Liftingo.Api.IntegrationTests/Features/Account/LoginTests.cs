@@ -193,6 +193,33 @@ public class LoginTests(SqlServerFixture fixture) : IntegrationTestBase(fixture)
     }
 
     [Fact]
+    public async Task Login_UnknownEmailLockedOutOnOneInstance_IsStillLockedOnAnotherWithTheSameRetryTime()
+    {
+        const string unknown = "nikt-nigdzie@example.pl";
+        string retryAfter;
+
+        using (ApiFactory first = CreateIsolatedFactory())
+        using (AuthTestClient client = first.CreateAuthClient())
+        {
+            for (int attempt = 1; attempt <= 4; attempt++)
+            {
+                (await client.LoginAsync(unknown, WrongPassword)).Dispose();
+            }
+
+            using HttpResponseMessage locked = await client.LoginAsync(unknown, WrongPassword);
+            retryAfter = await AssertLockedOutAsync(locked);
+        }
+
+        // A restart, or a second instance: a new host on the same Redis (FR-013).
+        using ApiFactory second = CreateIsolatedFactory();
+        using AuthTestClient other = second.CreateAuthClient();
+
+        using HttpResponseMessage stillLocked = await other.LoginAsync(unknown, WrongPassword);
+
+        Assert.Equal(retryAfter, await AssertLockedOutAsync(stillLocked));
+    }
+
+    [Fact]
     public async Task Login_KnownUserAttempts_WriteOneLoginRecordEachDecryptingToIpAndDevice()
     {
         (string email, string password, Guid userId) = await RegisterUserAsync();

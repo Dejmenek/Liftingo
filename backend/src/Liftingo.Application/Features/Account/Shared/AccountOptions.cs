@@ -62,7 +62,7 @@ public sealed class LegalOptions
 }
 
 /// <summary>
-/// The failed-login lockout rules that <see cref="FailedLoginThrottle"/> applies to e-mails without an account.
+/// The failed-login lockout rules that <c>ILoginThrottle</c> applies to e-mails without an account.
 /// They are the values Identity uses for real accounts: Infrastructure fills them from <c>Identity:Lockout</c>,
 /// so both paths always agree.
 /// </summary>
