@@ -40,7 +40,6 @@ public static class InfrastructureExtensions
         ArgumentNullException.ThrowIfNull(environment);
 
         services.TryAddSingleton(TimeProvider.System);
-        services.AddMemoryCache();
 
         services.AddPersistence(configuration);
         services.AddAccountOptions(configuration);
@@ -115,6 +114,7 @@ public static class InfrastructureExtensions
         });
 
         services.AddSingleton<ISessionStore, RedisSessionStore>();
+        services.AddSingleton<ILoginThrottle, RedisLoginThrottle>();
     }
 
     private static void AddIdentityServices(this IServiceCollection services, IConfiguration configuration)
@@ -161,7 +161,7 @@ public static class InfrastructureExtensions
                 identityOptions.Lockout.DefaultLockoutTimeSpan = security.Lockout.Duration;
             });
 
-        // The same lockout values for e-mails without an account (FailedLoginThrottle in Application), so the
+        // The same lockout values for e-mails without an account (RedisLoginThrottle), so the
         // answer for an unknown address matches a real one.
         services.AddSingleton<IOptions<LoginLockoutOptions>>(provider =>
         {

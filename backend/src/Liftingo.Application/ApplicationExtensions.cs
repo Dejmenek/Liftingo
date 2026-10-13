@@ -19,9 +19,6 @@ public static class ApplicationExtensions
         services.AddScoped<AccountTakeover>();
         services.AddScoped<FrontendRedirects>();
 
-        // In-memory state for e-mails without an account, so it must outlive a request.
-        services.AddSingleton<FailedLoginThrottle>();
-
         return services;
     }
 }

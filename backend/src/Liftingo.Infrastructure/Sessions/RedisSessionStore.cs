@@ -1,6 +1,5 @@
 using System.Buffers.Text;
 using System.Globalization;
-using System.Reflection;
 
 using Liftingo.Application.Common.Exceptions;
 using Liftingo.Application.Common.Security;
@@ -25,10 +24,10 @@ public sealed class RedisSessionStore(
 {
     private const string Prefix = "liftingo:";
 
-    private static readonly string s_rotateScript = LoadScript("rotate.lua");
-    private static readonly string s_revokeScript = LoadScript("revoke.lua");
-    private static readonly string s_revokeByTokenScript = LoadScript("revoke-by-token.lua");
-    private static readonly string s_revokeAllScript = LoadScript("revoke-all.lua");
+    private static readonly string s_rotateScript = RedisCalls.LoadScript("rotate.lua");
+    private static readonly string s_revokeScript = RedisCalls.LoadScript("revoke.lua");
+    private static readonly string s_revokeByTokenScript = RedisCalls.LoadScript("revoke-by-token.lua");
+    private static readonly string s_revokeAllScript = RedisCalls.LoadScript("revoke-all.lua");
 
     public async Task<(Guid SessionId, string RefreshToken, TimeSpan RemainingLifetime)> CreateAsync(
         Guid userId,
@@ -37,7 +36,7 @@ public sealed class RedisSessionStore(
     {
         ArgumentNullException.ThrowIfNull(device);
 
-        return await GuardAsync(async () =>
+        return await RedisCalls.GuardAsync(async () =>
         {
             ct.ThrowIfCancellationRequested();
 
@@ -89,7 +88,7 @@ public sealed class RedisSessionStore(
     {
         ArgumentNullException.ThrowIfNull(tokenHash);
 
-        return await GuardAsync<RotationResult>(async () =>
+        return await RedisCalls.GuardAsync<RotationResult>(async () =>
         {
             ct.ThrowIfCancellationRequested();
 
@@ -126,7 +125,7 @@ public sealed class RedisSessionStore(
 
     public async Task RevokeAsync(Guid sessionId, CancellationToken ct)
     {
-        await GuardAsync<bool>(async () =>
+        await RedisCalls.GuardAsync<bool>(async () =>
         {
             ct.ThrowIfCancellationRequested();
 
@@ -143,7 +142,7 @@ public sealed class RedisSessionStore(
     {
         ArgumentNullException.ThrowIfNull(tokenHash);
 
-        return await GuardAsync<SessionInfo?>(async () =>
+        return await RedisCalls.GuardAsync<SessionInfo?>(async () =>
         {
             ct.ThrowIfCancellationRequested();
 
@@ -162,7 +161,7 @@ public sealed class RedisSessionStore(
 
     public async Task<int> RevokeAllAsync(Guid userId, CancellationToken ct)
     {
-        return await GuardAsync(async () =>
+        return await RedisCalls.GuardAsync(async () =>
         {
             ct.ThrowIfCancellationRequested();
 
@@ -177,7 +176,7 @@ public sealed class RedisSessionStore(
 
     public async Task<bool> IsActiveAsync(Guid sessionId, CancellationToken ct)
     {
-        return await GuardAsync(async () =>
+        return await RedisCalls.GuardAsync(async () =>
         {
             ct.ThrowIfCancellationRequested();
 
@@ -199,32 +198,4 @@ public sealed class RedisSessionStore(
     private static RedisKey RefreshTokenKey(string tokenHash) => Prefix + "rt:" + tokenHash;
 
     private static RedisKey UserSessionsKey(Guid userId) => Prefix + "user-sessions:" + userId;
-
-    // Redis connection and timeout errors become one exception that Api maps to 503 (FR-015c).
-    private static async Task<T> GuardAsync<T>(Func<Task<T>> operation)
-    {
-        try
-        {
-            return await operation();
-        }
-        catch (RedisConnectionException ex)
-        {
-            throw new SessionStoreUnavailableException("The session store cannot be reached.", ex);
-        }
-        catch (RedisTimeoutException ex)
-        {
-            throw new SessionStoreUnavailableException("The session store did not answer in time.", ex);
-        }
-    }
-
-    private static string LoadScript(string name)
-    {
-        Assembly assembly = typeof(RedisSessionStore).Assembly;
-
-        using Stream stream = assembly.GetManifestResourceStream($"{typeof(RedisSessionStore).Namespace}.Scripts.{name}")
-            ?? throw new InvalidOperationException($"Embedded script '{name}' was not found.");
-        using var reader = new StreamReader(stream);
-
-        return reader.ReadToEnd();
-    }
 }

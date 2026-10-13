@@ -58,7 +58,7 @@ public sealed class Login : IEndpoint
         HttpContext http,
         IIdentityService identity,
         IApplicationDbContext db,
-        FailedLoginThrottle throttle,
+        ILoginThrottle throttle,
         SessionIssuer sessions,
         IEmailSender emails,
         TimeProvider timeProvider,
@@ -143,13 +143,13 @@ public sealed class Login : IEndpoint
         string email,
         string password,
         IIdentityService identity,
-        FailedLoginThrottle throttle,
+        ILoginThrottle throttle,
         SecurityAudit audit,
         ClientInfo client,
         CancellationToken ct)
     {
         // Same rules as a real account, so a lockout answer does not reveal that the address has no account (R8).
-        if (throttle.IsLockedOut(email, out DateTimeOffset lockedUntil))
+        if (await throttle.GetLockoutEndAsync(email, ct) is { } lockedUntil)
         {
             await audit.WriteAsync(null, SecurityEventType.Login, SecurityEventOutcome.LockedOut, client, ct);
 
@@ -159,7 +159,7 @@ public sealed class Login : IEndpoint
         // Spend the time a real password check would take.
         await identity.VerifyDummyPasswordAsync(password);
 
-        PasswordCheckResult.LockoutTriggered? triggered = throttle.RegisterFailure(email);
+        PasswordCheckResult.LockoutTriggered? triggered = await throttle.RegisterFailureAsync(email, ct);
 
         await audit.WriteAsync(null, SecurityEventType.Login, SecurityEventOutcome.Failed, client, ct);
 
