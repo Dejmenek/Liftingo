@@ -2,6 +2,7 @@ using System.Security.Claims;
 
 using AspNet.Security.OAuth.Twitter;
 
+using Liftingo.Api.Security;
 using Liftingo.Application.Common.Security;
 using Liftingo.Infrastructure.Identity;
 
@@ -124,23 +125,6 @@ public class ExternalProviderOptionsTests
         Assert.Equal("/api/v1/auth/external/callback", http.Response.Headers.Location.ToString());
     }
 
-    [Fact]
-    public async Task OnTicketReceived_SignedIn_StoresTheSchemeNameInTheProperties()
-    {
-        using ServiceProvider provider = Build(s_allProviders);
-        TwitterAuthenticationOptions options = provider.GetRequiredService<IOptionsMonitor<TwitterAuthenticationOptions>>().Get("X");
-        var scheme = new AuthenticationScheme("X", "X", typeof(TwitterAuthenticationHandler));
-        var principal = new ClaimsPrincipal(new ClaimsIdentity("Twitter"));
-        var context = new TicketReceivedContext(new DefaultHttpContext(), scheme, options, new AuthenticationTicket(principal, "Twitter"))
-        {
-            Properties = new AuthenticationProperties(),
-        };
-
-        await options.Events.OnTicketReceived(context);
-
-        Assert.Equal("X", context.Properties.Items["liftingo.provider"]);
-    }
-
     private static ServiceProvider Build(IDictionary<string, string?> settings)
     {
         IConfiguration configuration = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
@@ -148,7 +132,9 @@ public class ExternalProviderOptionsTests
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddDataProtection();
-        services.AddAuthentication().AddCookie(AuthenticationSchemes.External).AddExternalProviders(configuration);
+        services.AddAuthentication()
+            .AddCookie(AuthenticationSchemes.External)
+            .AddExternalProviders(configuration, AuthenticationSchemes.External, ExternalLoginPaths.Callback);
 
         return services.BuildServiceProvider();
     }

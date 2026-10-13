@@ -2,7 +2,6 @@ using Liftingo.Application.Common.Persistence;
 using Liftingo.Application.Common.Security;
 using Liftingo.Domain.Account;
 
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
 namespace Liftingo.Application.Features.Account.Shared;
@@ -16,7 +15,6 @@ public sealed class SessionIssuer(
     ISessionStore sessions,
     IAccessTokenIssuer accessTokens,
     IIdentityService identity,
-    RefreshTokenCookie refreshCookie,
     TimeProvider timeProvider)
 {
     /// <summary>Stages the <see cref="KnownDevice"/> upsert. Call it before <c>SaveChangesAsync</c>.</summary>
@@ -49,10 +47,12 @@ public sealed class SessionIssuer(
         return false;
     }
 
-    /// <summary>Creates the Redis session, the access token and the refresh cookie. Call it after the commit.</summary>
-    public async Task<AuthSessionResponse> IssueAsync(HttpContext http, Guid userId, ClientInfo client, CancellationToken ct)
+    /// <summary>
+    /// Creates the Redis session and the access token. Call it after the commit. Api writes the refresh token to
+    /// the cookie.
+    /// </summary>
+    public async Task<IssuedSession> IssueAsync(Guid userId, ClientInfo client, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(http);
         ArgumentNullException.ThrowIfNull(client);
 
         AccountSummary summary = await identity.GetSummaryAsync(userId, ct)
@@ -63,8 +63,6 @@ public sealed class SessionIssuer(
 
         AccessToken accessToken = accessTokens.Issue(userId, sessionId, summary.EmailVerified);
 
-        refreshCookie.Append(http.Response, refreshToken, remainingLifetime);
-
-        return new AuthSessionResponse(accessToken.Value, accessToken.ExpiresAt, AccountResponse.From(summary));
+        return new IssuedSession(accessToken.Value, accessToken.ExpiresAt, summary, refreshToken, remainingLifetime);
     }
 }

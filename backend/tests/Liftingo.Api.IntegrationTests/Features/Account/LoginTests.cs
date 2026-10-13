@@ -3,9 +3,9 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 
+using Liftingo.Api.Endpoints.Account.Shared;
 using Liftingo.Api.IntegrationTests.Infrastructure;
 using Liftingo.Api.IntegrationTests.Infrastructure.Fakers;
-using Liftingo.Application.Features.Account.Shared;
 using Liftingo.Domain.Account;
 using Liftingo.Infrastructure.Audit;
 using Liftingo.Infrastructure.Identity;

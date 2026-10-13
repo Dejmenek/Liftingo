@@ -2,9 +2,9 @@ using System.Globalization;
 using System.Net;
 using System.Text;
 
+using Liftingo.Api.Endpoints;
+using Liftingo.Api.Endpoints.Account.Shared;
 using Liftingo.Api.IntegrationTests.Infrastructure;
-using Liftingo.Application.Common.Routes;
-using Liftingo.Application.Features.Account.Shared;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

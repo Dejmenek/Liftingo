@@ -1,5 +1,5 @@
-using Liftingo.Infrastructure.Email;
 using Liftingo.Infrastructure.Audit;
+using Liftingo.Infrastructure.Email;
 
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;

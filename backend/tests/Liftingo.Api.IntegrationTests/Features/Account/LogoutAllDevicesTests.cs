@@ -1,7 +1,7 @@
 using System.Net;
 
+using Liftingo.Api.Endpoints.Account.Shared;
 using Liftingo.Api.IntegrationTests.Infrastructure;
-using Liftingo.Application.Features.Account.Shared;
 using Liftingo.Domain.Account;
 using Liftingo.Infrastructure.Audit;
 

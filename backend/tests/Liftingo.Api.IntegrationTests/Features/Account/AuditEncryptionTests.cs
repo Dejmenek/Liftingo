@@ -1,5 +1,4 @@
 using Liftingo.Api.IntegrationTests.Infrastructure;
-using Liftingo.Application.Features.Account.Shared;
 using Liftingo.Infrastructure.Audit;
 
 using Microsoft.EntityFrameworkCore;
