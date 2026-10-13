@@ -1,3 +1,4 @@
+using Liftingo.Application.Common.Messaging;
 using Liftingo.Application.Common;
 using Liftingo.Application.Common.Email;
 using Liftingo.Application.Common.Persistence;
@@ -14,7 +15,7 @@ public sealed class ResendVerificationEmailCommandHandler(
     IIdentityService identity,
     IApplicationDbContext db,
     EmailTokenIssuer emailTokens,
-    IEmailSender emails)
+    IEmailSender emails) : ICommandHandler<ResendVerificationEmailCommand>
 {
     public async Task<Result> HandleAsync(ResendVerificationEmailCommand command, CancellationToken ct)
     {

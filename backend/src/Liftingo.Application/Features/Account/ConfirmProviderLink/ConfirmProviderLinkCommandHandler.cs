@@ -1,6 +1,7 @@
 using FluentValidation.Results;
 
 using Liftingo.Application.Common.Email;
+using Liftingo.Application.Common.Messaging;
 using Liftingo.Application.Common.Persistence;
 using Liftingo.Application.Common.Result;
 using Liftingo.Application.Common.Security;
@@ -23,7 +24,7 @@ public sealed class ConfirmProviderLinkCommandHandler(
     SessionIssuer sessions,
     IEmailSender emails,
     SecurityAudit audit,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider) : ICommandHandler<ConfirmProviderLinkCommand, ConfirmProviderLinkResponse>
 {
     private static readonly Error s_linkInvalid = Error.Validation(
         "Auth.ProviderLinkInvalid",

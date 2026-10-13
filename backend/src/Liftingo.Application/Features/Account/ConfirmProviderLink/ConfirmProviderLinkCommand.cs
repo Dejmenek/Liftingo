@@ -1,3 +1,4 @@
+using Liftingo.Application.Common.Messaging;
 using Liftingo.Application.Features.Account.Shared;
 
 namespace Liftingo.Application.Features.Account.ConfirmProviderLink;
@@ -12,4 +13,4 @@ public sealed record ConfirmProviderLinkCommand(
     bool? AcceptTermsAndAge,
     bool? AcceptHealthData,
     bool? AcceptMarketing,
-    ClientInfo Client);
+    ClientInfo Client) : ICommand<ConfirmProviderLinkResponse>;

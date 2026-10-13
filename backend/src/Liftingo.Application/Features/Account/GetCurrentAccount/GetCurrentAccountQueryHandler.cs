@@ -1,10 +1,11 @@
+using Liftingo.Application.Common.Messaging;
 using Liftingo.Application.Common;
 using Liftingo.Application.Common.Result;
 using Liftingo.Application.Common.Security;
 
 namespace Liftingo.Application.Features.Account.GetCurrentAccount;
 
-public sealed class GetCurrentAccountQueryHandler(IUserContext userContext, IIdentityService identity)
+public sealed class GetCurrentAccountQueryHandler(IUserContext userContext, IIdentityService identity) : IQueryHandler<GetCurrentAccountQuery, GetCurrentAccountResponse>
 {
     // A valid token for an account that no longer exists (deleted after the token was issued).
     private static readonly Error s_accountNotFound =

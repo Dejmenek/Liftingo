@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 
 using FluentValidation;
 
+using Liftingo.Application.Common.Messaging;
 using Liftingo.Application.Features.Account.Shared;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -11,21 +12,31 @@ namespace Liftingo.Application;
 
 public static class ApplicationExtensions
 {
-    private const string CommandHandlerSuffix = "CommandHandler";
-    private const string QueryHandlerSuffix = "QueryHandler";
+    private static readonly Type[] s_handlerInterfaces =
+    [
+        typeof(ICommandHandler<>),
+        typeof(ICommandHandler<,>),
+        typeof(IQueryHandler<,>),
+    ];
 
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        // Handlers and validators are found by convention (R22): every *CommandHandler and *QueryHandler, and every
-        // FluentValidation validator, as the concrete type the handler or endpoint injects.
-        foreach (Type type in typeof(ApplicationExtensions).Assembly.GetTypes().Where(IsHandlerOrValidator))
+        foreach (Type type in typeof(ApplicationExtensions).Assembly.GetTypes().Where(IsConcreteClass))
         {
-            services.AddScoped(type);
+        // Helpers shared by the Account slices (concrete classes, not abstractions over EF).
+            foreach (Type handlerInterface in type.GetInterfaces().Where(IsHandlerInterface))
+            {
+                services.AddScoped(handlerInterface, type);
+            }
+
+            if (IsValidator(type))
+            {
+                services.AddScoped(type);
+            }
         }
 
-        // Helpers shared by the Account slices (concrete classes, not abstractions over EF).
         services.AddScoped<SessionIssuer>();
         services.AddScoped<SecurityAudit>();
         services.AddScoped<EmailTokenIssuer>();
@@ -35,11 +46,8 @@ public static class ApplicationExtensions
         return services;
     }
 
-    private static bool IsHandlerOrValidator(Type type) =>
-        IsConcreteClass(type)
-        && (type.Name.EndsWith(CommandHandlerSuffix, StringComparison.Ordinal)
-            || type.Name.EndsWith(QueryHandlerSuffix, StringComparison.Ordinal)
-            || IsValidator(type));
+    private static bool IsHandlerInterface(Type type) =>
+        type.IsGenericType && s_handlerInterfaces.Contains(type.GetGenericTypeDefinition());
 
     private static bool IsConcreteClass(Type type) =>
         type is { IsClass: true, IsAbstract: false, IsGenericTypeDefinition: false }

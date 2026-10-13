@@ -1,3 +1,4 @@
+using Liftingo.Application.Common.Messaging;
 using Liftingo.Application.Features.Account.Shared;
 
 namespace Liftingo.Application.Features.Account.Register;
@@ -14,4 +15,4 @@ public sealed record RegisterCommand(
     bool AcceptTermsAndAge,
     bool AcceptHealthData,
     bool AcceptMarketing,
-    ClientInfo Client);
+    ClientInfo Client) : ICommand<RegisterResponse>;

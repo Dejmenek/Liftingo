@@ -294,6 +294,12 @@ dotnet_diagnostic.CA2225.severity = none  # implicit conversions are the point; 
 [**/Common/Security/{RotationResult,PasswordCheckResult}.cs]
 dotnet_diagnostic.CA1034.severity = none
 
+# Command and query markers (Common/Messaging): they are empty on purpose, and the type parameter only
+# ties a command or query to the response its handler returns.
+[**/Common/Messaging/{ICommand,IQuery}.cs]
+dotnet_diagnostic.CA1040.severity = none
+dotnet_diagnostic.S2326.severity = none
+
 dotnet_naming_style.begins_with_i.required_prefix = I
 dotnet_naming_style.begins_with_i.required_suffix = 
 dotnet_naming_style.begins_with_i.word_separator = 

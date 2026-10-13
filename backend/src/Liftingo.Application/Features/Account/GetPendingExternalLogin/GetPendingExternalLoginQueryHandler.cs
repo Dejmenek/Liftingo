@@ -1,3 +1,4 @@
+using Liftingo.Application.Common.Messaging;
 using Liftingo.Application.Common.Result;
 using Liftingo.Application.Common.Security;
 using Liftingo.Application.Features.Account.Shared;
@@ -5,7 +6,7 @@ using Liftingo.Application.Features.Account.Shared;
 namespace Liftingo.Application.Features.Account.GetPendingExternalLogin;
 
 /// <summary>What the consent step shows about the pending provider sign-in.</summary>
-public sealed class GetPendingExternalLoginQueryHandler(IIdentityService identity, IExternalProviderCatalog catalog)
+public sealed class GetPendingExternalLoginQueryHandler(IIdentityService identity, IExternalProviderCatalog catalog) : IQueryHandler<GetPendingExternalLoginQuery, GetPendingExternalLoginResponse>
 {
     public async Task<Result<GetPendingExternalLoginResponse>> HandleAsync(GetPendingExternalLoginQuery query, CancellationToken ct)
     {

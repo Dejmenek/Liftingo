@@ -1,3 +1,4 @@
+using Liftingo.Application.Common.Messaging;
 using Liftingo.Application.Common.Result;
 using Liftingo.Application.Common.Security;
 using Liftingo.Application.Features.Account.Shared;
@@ -10,7 +11,7 @@ public sealed class RefreshSessionCommandHandler(
     ISessionStore sessionStore,
     IIdentityService identity,
     IAccessTokenIssuer accessTokens,
-    SecurityAudit audit)
+    SecurityAudit audit) : ICommandHandler<RefreshSessionCommand, RefreshSessionResponse>
 {
     private static readonly Error s_sessionInvalid =
         Error.Unauthorized("Auth.SessionInvalid", "Sesja wygasła lub jest nieprawidłowa. Zaloguj się ponownie.");

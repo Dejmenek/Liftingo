@@ -1,5 +1,6 @@
 using Liftingo.Api.Endpoints.Account.Shared;
 using Liftingo.Api.Http;
+using Liftingo.Application.Common.Messaging;
 using Liftingo.Application.Common.Result;
 using Liftingo.Application.Common.Security;
 using Liftingo.Application.Features.Account.CompleteExternalLogin;
@@ -24,7 +25,7 @@ internal sealed class CompleteExternalLoginEndpoint : IEndpoint
     private static async Task<IResult> HandleAsync(
         CompleteExternalLoginRequest request,
         HttpContext http,
-        CompleteExternalLoginCommandHandler handler,
+        ICommandHandler<CompleteExternalLoginCommand, CompleteExternalLoginResponse> handler,
         RefreshTokenCookie refreshCookie,
         CancellationToken ct)
     {

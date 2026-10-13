@@ -1,5 +1,6 @@
 using Liftingo.Api.Endpoints.Account.Shared;
 using Liftingo.Api.Http;
+using Liftingo.Application.Common.Messaging;
 using Liftingo.Application.Common.Result;
 using Liftingo.Application.Features.Account.ResetPassword;
 
@@ -18,7 +19,7 @@ internal sealed class ResetPasswordEndpoint : IEndpoint
     private static async Task<IResult> HandleAsync(
         ResetPasswordRequest request,
         HttpContext http,
-        ResetPasswordCommandHandler handler,
+        ICommandHandler<ResetPasswordCommand> handler,
         RefreshTokenCookie refreshCookie,
         CancellationToken ct)
     {

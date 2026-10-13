@@ -1,5 +1,6 @@
 using Liftingo.Api.Endpoints.Account.Shared;
 using Liftingo.Api.Http;
+using Liftingo.Application.Common.Messaging;
 using Liftingo.Application.Common.Result;
 using Liftingo.Application.Features.Account.GetPendingExternalLogin;
 
@@ -13,7 +14,7 @@ internal sealed class GetPendingExternalLoginEndpoint : IEndpoint
             .Produces<GetPendingExternalLoginResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
-    private static async Task<IResult> HandleAsync(HttpContext http, GetPendingExternalLoginQueryHandler handler, CancellationToken ct)
+    private static async Task<IResult> HandleAsync(HttpContext http, IQueryHandler<GetPendingExternalLoginQuery, GetPendingExternalLoginResponse> handler, CancellationToken ct)
     {
         Result<GetPendingExternalLoginResponse> result = await handler.HandleAsync(
             new GetPendingExternalLoginQuery(await ExternalLoginCookie.ReadAsync(http)),

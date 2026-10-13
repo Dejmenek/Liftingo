@@ -1,6 +1,7 @@
 using FluentValidation.Results;
 
 using Liftingo.Application.Common.Email;
+using Liftingo.Application.Common.Messaging;
 using Liftingo.Application.Common.Persistence;
 using Liftingo.Application.Common.Result;
 using Liftingo.Application.Common.Security;
@@ -19,7 +20,7 @@ public sealed class ForgotPasswordCommandHandler(
     IIdentityService identity,
     IApplicationDbContext db,
     EmailTokenIssuer emailTokens,
-    IEmailSender emails)
+    IEmailSender emails) : ICommandHandler<ForgotPasswordCommand>
 {
     public async Task<Result> HandleAsync(ForgotPasswordCommand command, CancellationToken ct)
     {

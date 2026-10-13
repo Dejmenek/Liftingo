@@ -2,6 +2,7 @@ using FluentValidation.Results;
 
 using Liftingo.Application.Common.Email;
 using Liftingo.Application.Common.Exceptions;
+using Liftingo.Application.Common.Messaging;
 using Liftingo.Application.Common.Persistence;
 using Liftingo.Application.Common.Result;
 using Liftingo.Application.Common.Security;
@@ -25,7 +26,7 @@ public sealed class CompleteExternalLoginCommandHandler(
     AccountTakeover takeover,
     IEmailSender emails,
     SecurityAudit audit,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider) : ICommandHandler<CompleteExternalLoginCommand, CompleteExternalLoginResponse>
 {
     private static readonly Error s_emailRequired =
         Error.Validation("Validation.EmailRequired", "Podaj adres e-mail.");

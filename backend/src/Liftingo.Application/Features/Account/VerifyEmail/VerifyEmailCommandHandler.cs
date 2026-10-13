@@ -1,5 +1,6 @@
 using FluentValidation.Results;
 
+using Liftingo.Application.Common.Messaging;
 using Liftingo.Application.Common.Persistence;
 using Liftingo.Application.Common.Result;
 using Liftingo.Application.Common.Security;
@@ -17,7 +18,7 @@ public sealed class VerifyEmailCommandHandler(
     IIdentityService identity,
     IApplicationDbContext db,
     EmailTokenIssuer emailTokens,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider) : ICommandHandler<VerifyEmailCommand, VerifyEmailResponse>
 {
     private static readonly Error s_linkInvalid = Error.Validation(
         "Auth.VerificationLinkInvalid",

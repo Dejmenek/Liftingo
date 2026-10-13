@@ -1,4 +1,5 @@
 using Liftingo.Api.Endpoints.Account.Shared;
+using Liftingo.Application.Common.Messaging;
 using Liftingo.Application.Features.Account.LogoutAllDevices;
 
 namespace Liftingo.Api.Endpoints.Account;
@@ -15,7 +16,7 @@ internal sealed class LogoutAllDevicesEndpoint : IEndpoint
 
     private static async Task<IResult> HandleAsync(
         HttpContext http,
-        LogoutAllDevicesCommandHandler handler,
+        ICommandHandler<LogoutAllDevicesCommand> handler,
         RefreshTokenCookie refreshCookie,
         CancellationToken ct)
     {

@@ -1,4 +1,5 @@
 using Liftingo.Api.Endpoints.Account.Shared;
+using Liftingo.Application.Common.Messaging;
 using Liftingo.Application.Common.Result;
 using Liftingo.Application.Common.Security;
 using Liftingo.Application.Features.Account.HandleExternalLoginCallback;
@@ -16,7 +17,7 @@ internal sealed class HandleExternalLoginCallbackEndpoint : IEndpoint
 
     private static async Task<IResult> HandleAsync(
         HttpContext http,
-        HandleExternalLoginCallbackCommandHandler handler,
+        ICommandHandler<HandleExternalLoginCallbackCommand, HandleExternalLoginCallbackResponse> handler,
         RefreshTokenCookie refreshCookie,
         FrontendRedirects redirects,
         CancellationToken ct)

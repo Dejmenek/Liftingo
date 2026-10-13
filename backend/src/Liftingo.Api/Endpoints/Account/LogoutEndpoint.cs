@@ -1,4 +1,5 @@
 using Liftingo.Api.Endpoints.Account.Shared;
+using Liftingo.Application.Common.Messaging;
 using Liftingo.Application.Features.Account.Logout;
 
 namespace Liftingo.Api.Endpoints.Account;
@@ -15,7 +16,7 @@ internal sealed class LogoutEndpoint : IEndpoint
 
     private static async Task<IResult> HandleAsync(
         HttpContext http,
-        LogoutCommandHandler handler,
+        ICommandHandler<LogoutCommand> handler,
         RefreshTokenCookie refreshCookie,
         CancellationToken ct)
     {

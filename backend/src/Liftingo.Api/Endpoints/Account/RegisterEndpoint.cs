@@ -1,5 +1,6 @@
 using Liftingo.Api.Endpoints.Account.Shared;
 using Liftingo.Api.Http;
+using Liftingo.Application.Common.Messaging;
 using Liftingo.Application.Common.Result;
 using Liftingo.Application.Features.Account.Register;
 
@@ -17,7 +18,7 @@ internal sealed class RegisterEndpoint : IEndpoint
     private static async Task<IResult> HandleAsync(
         RegisterRequest request,
         HttpContext http,
-        RegisterCommandHandler handler,
+        ICommandHandler<RegisterCommand, RegisterResponse> handler,
         RefreshTokenCookie refreshCookie,
         CancellationToken ct)
     {

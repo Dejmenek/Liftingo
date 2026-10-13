@@ -1,5 +1,6 @@
 using FluentValidation.Results;
 
+using Liftingo.Application.Common.Messaging;
 using Liftingo.Application.Common.Persistence;
 using Liftingo.Application.Common.Result;
 using Liftingo.Application.Common.Security;
@@ -23,7 +24,7 @@ public sealed class ResetPasswordCommandHandler(
     EmailTokenIssuer emailTokens,
     AccountTakeover takeover,
     SecurityAudit audit,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider) : ICommandHandler<ResetPasswordCommand>
 {
     private static readonly Error s_linkInvalid = Error.Validation(
         "Auth.ResetLinkInvalid",

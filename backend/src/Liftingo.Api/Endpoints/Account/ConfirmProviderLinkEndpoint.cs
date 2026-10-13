@@ -1,5 +1,6 @@
 using Liftingo.Api.Endpoints.Account.Shared;
 using Liftingo.Api.Http;
+using Liftingo.Application.Common.Messaging;
 using Liftingo.Application.Common.Result;
 using Liftingo.Application.Features.Account.ConfirmProviderLink;
 
@@ -19,7 +20,7 @@ internal sealed class ConfirmProviderLinkEndpoint : IEndpoint
     private static async Task<IResult> HandleAsync(
         ConfirmProviderLinkRequest request,
         HttpContext http,
-        ConfirmProviderLinkCommandHandler handler,
+        ICommandHandler<ConfirmProviderLinkCommand, ConfirmProviderLinkResponse> handler,
         RefreshTokenCookie refreshCookie,
         CancellationToken ct)
     {

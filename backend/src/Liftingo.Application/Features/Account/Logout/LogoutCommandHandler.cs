@@ -1,3 +1,4 @@
+using Liftingo.Application.Common.Messaging;
 using Liftingo.Application.Common.Result;
 using Liftingo.Application.Common.Security;
 using Liftingo.Application.Features.Account.Shared;
@@ -9,7 +10,7 @@ namespace Liftingo.Application.Features.Account.Logout;
 /// Ends the session of the refresh token (FR-015). It works with the cookie alone, so a user whose access token has
 /// expired can still sign out.
 /// </summary>
-public sealed class LogoutCommandHandler(ISessionStore sessionStore, SecurityAudit audit)
+public sealed class LogoutCommandHandler(ISessionStore sessionStore, SecurityAudit audit) : ICommandHandler<LogoutCommand>
 {
     public async Task<Result> HandleAsync(LogoutCommand command, CancellationToken ct)
     {

@@ -1,4 +1,5 @@
 using Liftingo.Api.Http;
+using Liftingo.Application.Common.Messaging;
 using Liftingo.Application.Common.Result;
 using Liftingo.Application.Features.Account.VerifyEmail;
 
@@ -13,7 +14,7 @@ internal sealed class VerifyEmailEndpoint : IEndpoint
             .Produces<VerifyEmailResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest);
 
-    private static async Task<IResult> HandleAsync(VerifyEmailCommand command, VerifyEmailCommandHandler handler, CancellationToken ct)
+    private static async Task<IResult> HandleAsync(VerifyEmailCommand command, ICommandHandler<VerifyEmailCommand, VerifyEmailResponse> handler, CancellationToken ct)
     {
         Result<VerifyEmailResponse> result = await handler.HandleAsync(command, ct);
 

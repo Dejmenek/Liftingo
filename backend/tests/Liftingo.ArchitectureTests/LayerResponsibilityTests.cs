@@ -3,6 +3,8 @@ using System.Text.RegularExpressions;
 using ArchUnitNET.Domain;
 using ArchUnitNET.xUnitV3;
 
+using Liftingo.Application.Common.Messaging;
+
 using static ArchUnitNET.Fluent.ArchRuleDefinition;
 
 namespace Liftingo.ArchitectureTests;
@@ -72,13 +74,49 @@ public partial class LayerResponsibilityTests : BaseTest
         string[] misplaced =
         [
             .. Handlers()
-                .Where(handler => !handler.Name.EndsWith("CommandHandler", StringComparison.Ordinal)
-                    && !handler.Name.EndsWith("QueryHandler", StringComparison.Ordinal)
-                    || !UseCaseNamespace().IsMatch(handler.Namespace ?? string.Empty))
+                .Where(handler => !UseCaseNamespace().IsMatch(handler.Namespace ?? string.Empty))
                 .Select(handler => handler.FullName!),
         ];
 
         Assert.Empty(misplaced);
+    }
+
+    [Fact]
+    public void ApplicationHandlers_ImplementTheInterfaceTheirNameSays()
+    {
+        string[] mismatched =
+        [
+            .. ApplicationAssembly.GetTypes()
+                .Where(type => type is { IsClass: true, IsAbstract: false } && !type.IsNested)
+                .Where(type => type.Name.EndsWith("Handler", StringComparison.Ordinal) || IsHandler(type))
+                .Where(type => !(type.Name.EndsWith("CommandHandler", StringComparison.Ordinal)
+                        && Implements(type, typeof(ICommandHandler<>), typeof(ICommandHandler<,>))
+                    || type.Name.EndsWith("QueryHandler", StringComparison.Ordinal)
+                        && Implements(type, typeof(IQueryHandler<,>))))
+                .Select(type => type.FullName!),
+        ];
+
+        Assert.Empty(mismatched);
+    }
+
+    [Fact]
+    public void ApplicationCommandsAndQueries_ImplementTheInterfaceTheirNameSays()
+    {
+        string[] mismatched =
+        [
+            .. ApplicationAssembly.GetTypes()
+                .Where(type => UseCaseNamespace().IsMatch(type.Namespace ?? string.Empty))
+                .Where(type => type.Name.EndsWith("Command", StringComparison.Ordinal)
+                    || type.Name.EndsWith("Query", StringComparison.Ordinal)
+                    || Implements(type, typeof(ICommand), typeof(ICommand<>), typeof(IQuery<>)))
+                .Where(type => !(type.Name.EndsWith("Command", StringComparison.Ordinal)
+                        && Implements(type, typeof(ICommand), typeof(ICommand<>))
+                    || type.Name.EndsWith("Query", StringComparison.Ordinal)
+                        && Implements(type, typeof(IQuery<>))))
+                .Select(type => type.FullName!),
+        ];
+
+        Assert.Empty(mismatched);
     }
 
     [Fact]
@@ -89,7 +127,8 @@ public partial class LayerResponsibilityTests : BaseTest
             .. Handlers()
                 .SelectMany(handler => handler.GetConstructors()
                     .SelectMany(constructor => constructor.GetParameters())
-                    .Where(parameter => parameter.ParameterType.Name.EndsWith("Handler", StringComparison.Ordinal))
+                    .Where(parameter => IsHandler(parameter.ParameterType)
+                        || parameter.ParameterType.Name.EndsWith("Handler", StringComparison.Ordinal))
                     .Select(parameter => $"{handler.Name} -> {parameter.ParameterType.Name}")),
         ];
 
@@ -120,7 +159,15 @@ public partial class LayerResponsibilityTests : BaseTest
     private static IEnumerable<Type> Handlers() =>
         ApplicationAssembly.GetTypes()
             .Where(type => type is { IsClass: true, IsAbstract: false } && !type.IsNested)
-            .Where(type => type.Name.EndsWith("Handler", StringComparison.Ordinal));
+            .Where(type => type.Name.EndsWith("Handler", StringComparison.Ordinal) || IsHandler(type));
+
+    private static bool IsHandler(Type type) =>
+        Implements(type, typeof(ICommandHandler<>), typeof(ICommandHandler<,>), typeof(IQueryHandler<,>));
+
+    private static bool Implements(Type type, params Type[] interfaces) =>
+        (type.IsInterface ? [type, .. type.GetInterfaces()] : type.GetInterfaces())
+            .Select(i => i.IsGenericType ? i.GetGenericTypeDefinition() : i)
+            .Any(interfaces.Contains);
 
     [GeneratedRegex("^Liftingo\\.Application\\.Features\\.[A-Za-z]+\\.[A-Za-z]+$")]
     private static partial Regex UseCaseNamespace();

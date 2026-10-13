@@ -1,3 +1,4 @@
+using Liftingo.Application.Common.Messaging;
 using Liftingo.Application.Common.Security;
 using Liftingo.Application.Features.Account.Shared;
 
@@ -15,4 +16,4 @@ public sealed record CompleteExternalLoginCommand(
     bool AcceptMarketing,
     string? Email,
     ExternalIdentity? External,
-    ClientInfo Client);
+    ClientInfo Client) : ICommand<CompleteExternalLoginResponse>;
