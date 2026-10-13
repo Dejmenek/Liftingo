@@ -7,7 +7,6 @@ namespace Liftingo.Application.Features.Account.ConfirmProviderLink;
 /// <param name="AcceptTermsAndAge">Only read when the account e-mail is unverified.</param>
 /// <param name="AcceptHealthData">Only read when the account e-mail is unverified.</param>
 /// <param name="AcceptMarketing">Only read when the account e-mail is unverified.</param>
-/// <param name="Client">The caller's device and address.</param>
 public sealed record ConfirmProviderLinkCommand(
     string Token,
     bool? AcceptTermsAndAge,

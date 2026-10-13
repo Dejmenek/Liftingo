@@ -89,8 +89,7 @@ public sealed class TestEndpointsStartupFilter : IStartupFilter
                 await nextMiddleware();
             });
 
-            // The app maps no endpoints yet, so it doesn't add routing on its own. Routing has to run
-            // before the app's middleware, because request timeouts read the endpoint's policy.
+            // Routing has to run before the app's middleware, because request timeouts read the endpoint's policy.
             app.UseRouting();
 
             next(app);
