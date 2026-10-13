@@ -48,9 +48,14 @@ data.
 - Account deletion MUST follow the 7-day grace period, then irreversible removal from live data,
   with backups purged within 30 days. Personal-data export MUST be a complete, documented JSON
   archive.
-- Application and error logs MUST NOT contain personal data (no e-mail, name, body data or set
-  values). Retention periods in the PRD retention schedule (NFR-40) MUST be enforced by daily,
-  logged jobs.
+- Application and error logs MUST NOT contain personal data (no e-mail, name, body data, set
+  values or IP addresses). Retention periods in the PRD retention schedule (NFR-40) MUST be
+  enforced by daily, logged jobs or by the storing service's configured retention.
+- The security audit log (NFR-17) is a separate stream, not part of application logs, and MUST be
+  stored apart from them. Its personal fields (IP address, device type) MUST be encrypted with a
+  per-user key before they leave the application; deleting that key (crypto-shredding) is how
+  audit data is erased on account deletion. Audit events MUST NOT contain e-mail addresses,
+  passwords or tokens.
 - Limits and retention windows MUST be configuration values, not code constants.
 
 Rationale: the product's legal viability and the thesis's compliance goals depend on privacy being
@@ -95,7 +100,7 @@ log directly drives churn.
 Behavior MUST be verified by automated tests proportional to its risk.
 
 - Backend unit tests use xUnit and NSubstitute; integration tests use TestContainers against real
-  dependencies (SQL Server); test data uses Bogus. Tests MUST be named
+  dependencies (SQL Server, Redis); test data uses Bogus. Tests MUST be named
   `[Method]_[Scenario]_[ExpectedResult]`, and test files mirror the slice under test with a
   `Tests` suffix.
 - The rules engine and methodology validator MUST have determinism tests; every P0 flow MUST be
@@ -143,14 +148,17 @@ Rationale: the scope is intentionally bounded; complexity beyond it threatens de
 The following stack is binding; deviations require a constitution amendment.
 
 - **Backend**: .NET 10, ASP.NET Core Web API (Minimal APIs), EF Core on SQL Server (local) /
-  Azure SQL (prod), ASP.NET Core Identity with Google/Apple external providers and JWT auth with
-  refresh tokens, Hangfire for background jobs, FluentValidation, Serilog structured logging,
-  OpenAPI, Microsoft Foundry (AI), Azure Communication Services Email, Azure Blob Storage with
-  QuestPDF (exports).
+  Azure SQL (prod), ASP.NET Core Identity with Google/Facebook/Twitter (X) external providers and JWT auth with
+  refresh tokens, Redis (StackExchange.Redis) as the store for user sessions and refresh tokens,
+  Hangfire for background jobs, FluentValidation, Serilog structured logging, Azure Monitor Log
+  Analytics for the security audit log (dedicated custom table, 90-day retention, KQL queries by
+  user id for export; per-user encryption keys kept in SQL Server), OpenAPI, Microsoft Foundry
+  (AI), Azure Communication Services Email, Azure Blob Storage with QuestPDF (exports).
 - **Frontend**: Angular 22 + TypeScript, Angular service worker PWA, Dexie.js (IndexedDB) for
   offline storage, Tailwind, Angular Aria + CDK, NSwag-generated client, Playwright.
-- **Hosting and delivery**: Azure App Service (backend), Azure Static Web Apps (frontend), GitHub
-  Actions for build, test and deploy, Docker for local dependencies.
+- **Hosting and delivery**: Azure App Service (backend), Azure Static Web Apps (frontend), Azure
+  Cache for Redis, Azure Monitor Log Analytics workspace, GitHub Actions for build, test and
+  deploy, Docker for local dependencies (SQL Server, Redis).
 - **Security**: passwords ≥ 8 chars with ≥ 1 digit and ≥ 1 special character; login attempt
   lockout (15 min after 5 consecutive failures) and audit logging; no account enumeration on recovery flows.
 - **Performance targets**: first load ≤ 3 s on 4G (p75), AI plan generation ≤ 10 s (p95), set
@@ -190,4 +198,4 @@ frontend) are the source of runtime development guidance.
 - **Dependency drift**: when a PRD requirement or tech-stack choice changes, this constitution and
   the relevant `AGENTS.md` MUST be updated in the same change.
 
-**Version**: 1.0.1 | **Ratified**: 2026-10-06 | **Last Amended**: 2026-10-07
+**Version**: 1.1.0 | **Ratified**: 2026-10-06 | **Last Amended**: 2026-10-12
