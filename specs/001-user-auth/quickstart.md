@@ -47,7 +47,8 @@ dotnet test tests/Liftingo.ArchitectureTests      # layer rules still hold
 dotnet test tests/Liftingo.Api.IntegrationTests   # every slice against SQL Server + Redis containers
 ```
 
-Expected: all green. Integration tests use `CapturingEmailSender`, `CapturingAuditSink`, a fake
+Expected: all green. Integration tests use `CapturingEmailTransport` (named `CapturingEmailSender`
+before rev. e), `CapturingAuditSink`, a fake
 external auth handler and a fake `TimeProvider`, so they need no provider credentials and test
 expiry without waiting. The exception is Identity's own lockout, which uses the system clock;
 those tests edit `LockoutEnd` directly. Redis key TTLs are asserted directly instead of waiting 30 days.
@@ -76,6 +77,11 @@ Coverage that must exist (by spec success criterion):
 | FR-023a | `CompleteExternalLoginTests` (typed e-mail of an existing account → `202`, token holds provider + key, no user or login added) and `ConfirmProviderLinkTests` (link, `ConsentRequired` keeps the token, takeover on unverified, `ProviderAlreadyLinked`, limit of 3 per hour) |
 | SC-010 (backend part) | `RegisterTests` / `LoginTests`: token only in the body; `Set-Cookie` has `HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/api/v1/auth/session`. The browser-side check belongs to the frontend feature. |
 | US-18 groundwork | `AuditEncryptionTests`: after the user row is deleted, the key row is gone and the captured records can no longer be decrypted |
+| FR-013 (rev. e) | `RedisLoginThrottleTests`: the rules of R8 against the Redis container (no count during lockout, no decay, reset on trigger, entry expires only after the lockout). `LoginTests`: an unknown address locked out through one `ApiFactory` is still locked, with the same retry time, through a second `ApiFactory` on the same Redis (restart or second instance) |
+| FR-029 (rev. e) | `RegisterTests`: of two simultaneous registrations for one address, the one whose save fails (unique index) sends no e-mail; when the transport throws, the request still succeeds and only the e-mail type and user id are logged |
+| FR-026a (rev. e) | `AccountEmailRendererTests`: a July and a January sign-in show Warsaw summer and winter time; `EmailOptionsValidatorTests`: an unknown `Email:DisplayTimeZone` fails validation, so startup stops |
+| Constitution I–II (rev. e) | `LayerResponsibilityTests`: Application references only the allowlisted assemblies; no ASP.NET Core, caching or Redis types in Application; handler naming and folders; no handler depends on another; Api uses Infrastructure only in its wiring classes and never touches `IApplicationDbContext` |
+| No behaviour change (rev. e) | every integration test above passes unchanged against the refactored code, apart from type renames in the test infrastructure |
 
 ## Run locally
 
@@ -91,6 +97,9 @@ In the console:
   with IP and device type encrypted;
 - e-mail and IP addresses in application log lines, the development e-mails included, show up
   masked by the Serilog masking enricher.
+
+Startup check (rev. e, FR-026a): run once with `Email__DisplayTimeZone=Mars/Olympus`; the app must
+stop at startup with an options validation error naming `Email:DisplayTimeZone`.
 
 ## Manual scenarios
 

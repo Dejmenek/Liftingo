@@ -26,6 +26,16 @@ provider that returns another account's e-mail is refused (R9). Audit events wit
 carry no IP or device type, so the shared audit key is gone (R14). New R18 covers the existing
 rate limiter, HTTPS, the 503 mapping, retention and performance targets.
 
+**Revision 2026-10-13 (e)**: a refactor pass for constitution v2.0.0 and the third clarification
+session. No endpoint, status code or response body changes. Endpoints and every HTTP concern move
+to `Api`; Application slices become command/query folders with explicit validator calls (R19,
+R22, R23). Authentication schemes are registered by `Api`, with Infrastructure supplying the
+provider and JWT configuration (R20). The unknown-e-mail lockout moves from memory to Redis
+(R21, replaces the memory throttle in R8). E-mail templates move to Infrastructure behind a
+port that takes one record per e-mail, and e-mail times use a configured display zone that is
+checked at startup (R24, replaces the template part of R11). Application's package list is
+enforced by architecture tests (R25).
+
 ---
 
 ## R1. How Application slices use ASP.NET Core Identity
@@ -271,8 +281,9 @@ whether the e-mail is registered. A lockout message shown only for real accounts
     `confirm-link` (R17) check `IsLockedOutAsync` on the matched account before signing in and
     refuse with the same retry time. These refusals and cancelled provider sign-ins never call
     `AccessFailedAsync`.
-- **Limitation**: the memory throttle resets on restart and is per instance. Acceptable for a
-  single App Service instance; noted for a later move to a table if the app scales out.
+- **Limitation** (superseded in rev. e): the memory throttle resets on restart and is per
+  instance. The clarification of 2026-10-13 (FR-013) does not accept that; the throttle moves to
+  Redis in R21.
 - **Alternatives**: no lockout message at all (breaks FR-012); persisting throttle rows for unknown
   e-mails (writes attacker-chosen data to the DB).
 - **Audit**: unknown-e-mail attempts are audited with `UserId = null` and no IP or device type
@@ -364,7 +375,8 @@ whether the e-mail is registered. A lockout message shown only for real accounts
     warning with the template name and user id only, no recipient (FR-028, FR-030). The calling
     flow still succeeds.
   - Integration tests replace it with `CapturingEmailSender` in `ApiFactory`.
-- **Templates**: `Features/Account/Shared/AccountEmails.cs` builds the six Polish messages
+- **Templates** (superseded in rev. e: the port now takes one record per e-mail and the templates
+  live in Infrastructure, see R24): `Features/Account/Shared/AccountEmails.cs` builds the six Polish messages
   (verification+welcome, verification-only for resends (FR-018), welcome-only, password reset,
   new device, provider link confirmation) from plain C# string templates and the frontend base URL
   (`App:FrontendBaseUrl`). No templating engine. Verification+welcome goes to e-mail/password
@@ -589,3 +601,218 @@ Liftingo account by typing its address.
   `email_verified` claim, FR-019). Checked manually before the feature is closed
   with an HTTP load tool against a local run (quickstart). No automated performance gate, the same
   as the PRD's NFR-01.
+
+## R19. What moves from Application to Api (rev. e)
+
+Constitution v2.0.0 Principle I: Application holds no HTTP concerns, and `Api` owns endpoints,
+routes, `Result` mapping, cookies, redirects and the `HttpContext`-based user and client info.
+Today 33 Application files import ASP.NET Core or `IMemoryCache`.
+
+- **Decision**: each HTTP concern moves to `Api` as an adapter. The handler receives plain values
+  and returns plain values.
+
+  | Today (Application) | After (Api) | What Application gets or returns instead |
+  |---|---|---|
+  | `Common/Routes/IEndpoint.cs`, `RouteConsts.cs` | `Endpoints/IEndpoint.cs`, `Endpoints/RouteConsts.cs` | nothing |
+  | `Common/Result/ResultExtensions.cs` (`ToProblem`, `RetryAfterProblemResult`) | `Http/ResultExtensions.cs` | `Result<T>`; `LockedOutError` and `ErrorType` stay in Application |
+  | `Shared/RefreshTokenCookie.cs` (read, append, delete) | `Endpoints/Account/Shared/RefreshTokenCookie.cs` | input: `string? RefreshToken` on the command; output: `IssuedSession` (R22) |
+  | `Shared/ClientInfo.From(HttpContext)` | `Endpoints/Account/Shared/ClientInfoReader.cs` | `ClientInfo` stays in Application with a pure factory `ClientInfo.Create(ip, userAgent, deviceIdHeader, deviceIdOverride)`, so the R6 parsing rules and `DeviceDescriptor` stay unit-tested where they are |
+  | `Shared/PendingExternalLogin.ReadAsync/ClearAsync` (auth cookie) | `Endpoints/Account/Shared/ExternalLoginCookie.cs` | input: `ExternalIdentity?` record (provider, key, e-mail, display name, device id) |
+  | `Shared/FrontendRedirects.cs` | `Endpoints/Account/Shared/FrontendRedirects.cs` | callback outcome or error code (R22) |
+  | `SessionsOptions.CookiePath` | `RefreshCookieOptions.Path` in Api, set from the version prefix | `SessionsOptions` keeps the two lifetimes |
+  | `Infrastructure/Identity/UserContext.cs` (`IHttpContextAccessor`) | `Api/Security/UserContext.cs` | `IUserContext` port unchanged |
+
+- `AppOptions.FrontendBaseUrl` is needed by two outer layers: Infrastructure builds e-mail links
+  (R24) and `Api` builds redirects. It moves to `Application/Common/Configuration/AppOptions.cs`
+  and is validated once at startup. It is a plain options class, so Application gains no
+  dependency.
+- **CancelExternalLogin** becomes an `Api`-only endpoint. It deletes the external cookie and
+  nothing else: no data, no rule, no audit. Wrapping that in a command would be a slice with an
+  empty handler.
+- **Alternatives**: an `IHttpResponseWriter` port that handlers call to set cookies (keeps HTTP
+  semantics in the handler under another name); an `ICurrentClient` port for `ClientInfo` (hides a
+  real input of the use case and gives jobs a port they can't fill). Both were rejected.
+
+## R20. Authentication schemes registered by Api (rev. e)
+
+Principle I gives `Api` "authentication schemes and authorization policies" and Infrastructure
+"Identity and the external auth providers". Today `InfrastructureExtensions` does both, and the
+scheme and path constants (`AuthenticationSchemes`, `ExternalLoginPaths`) sit in Application
+because both layers need them.
+
+- **Decision**: `Api/Extensions/AuthenticationExtensions.cs` calls `AddAuthentication`, registers
+  the JWT bearer scheme and the `Liftingo.External` cookie scheme, and sets the authorization
+  defaults. Infrastructure contributes only configuration, through two extension points that Api
+  calls during wiring:
+  - `AuthenticationBuilder.AddExternalProviders(configuration, signInScheme, callbackPath)` adds
+    the Google, Facebook and X handlers with the R9 configuration (only the configured ones);
+  - an `IConfigureNamedOptions<JwtBearerOptions>` in Infrastructure sets the signing key,
+    issuer and audience from `JwtOptions` and hooks `SessionValidation` into `OnTokenValidated`.
+  The constants move to `Api/Security/AuthenticationSchemes.cs` and are passed to Infrastructure
+  as arguments, so Application has no HTTP constants left.
+- **Rationale**: Api decides which schemes exist and how requests are authenticated; Infrastructure
+  owns everything that talks to Identity, providers or token signing. Calling an Infrastructure
+  extension method from `Program`/`Extensions` is DI wiring, which Principle I allows.
+- **Alternatives**: leave registration in Infrastructure (breaks Principle I's split); move the
+  provider handlers to Api too (puts Identity-specific claim mapping, R9, in the HTTP layer).
+
+## R21. Unknown-e-mail lockout in Redis (rev. e, FR-013)
+
+The clarification of 2026-10-13 requires the counter and lockout for unregistered addresses to
+live in the shared session store, never in process memory.
+
+- **Decision**: port `Application/Common/Security/ILoginThrottle.cs` with
+  `GetLockoutEndAsync(email, ct)` and `RegisterFailureAsync(email, ct)`, returning the same
+  `LockoutTriggered` result as today. `Infrastructure/Sessions/RedisLoginThrottle.cs` implements it
+  on the session store's multiplexer:
+  - key `liftingo:login-throttle:{hex SHA-256 of trimmed, upper-cased e-mail}`, a hash with
+    `failures` and `lockoutEnd` (ISO 8601). The address itself is never stored (FR-030);
+  - `RegisterFailureAsync` runs one Lua script: refuse if `lockoutEnd` is still in the future;
+    otherwise clear `lockoutEnd`, increment `failures`, and when it reaches
+    `MaxFailedAccessAttempts`, set `failures = 0`, `lockoutEnd = now + Duration` and
+    `PEXPIRE key Duration`. The current time is passed in from `TimeProvider`, so tests keep using
+    the fake clock;
+  - an entry with `failures > 0` and no lockout has no TTL: the counter does not decay (FR-012).
+    An entry expires only when its counter is zero and its lockout has ended, as the spec states.
+    Growth is bounded by the global rate limiter (FR-040);
+  - Redis connection and timeout errors become `SessionStoreUnavailableException` → `503`, like
+    every other session operation (FR-015c).
+- The rules (refuse during lockout without counting, no decay, reset on trigger) are unchanged from
+  R8; only the store changes. `LoginLockoutOptions` still comes from `Identity:Lockout`.
+- **Tests**: an integration test locks out an unknown address, builds a second `ApiFactory` on the
+  same Redis container (a restart or a second instance), and checks that the sixth attempt is
+  still refused with the same retry time. The existing unit tests of the rules move to an
+  integration test against the Redis container, since the logic now lives in the script.
+- **Alternatives**: memory (rejected by the clarification); a SQL table (a database write on
+  every failed login; rejected in the clarification).
+
+## R22. Account slices as commands and queries (rev. e)
+
+- **Decision**: 17 endpoints map to 16 slices under `Application/Features/Account/{UseCase}/`, one
+  type per file (`{UseCase}Command`/`Query`, `…CommandHandler`/`QueryHandler`,
+  `…CommandValidator` where the input has rules, `{UseCase}Response`):
+
+  | Endpoint | Slice | Kind | Validator |
+  |---|---|---|---|
+  | `POST /auth/register` | `Register` | command | yes |
+  | `POST /auth/login` | `Login` | command | yes |
+  | `GET /auth/me` | `GetCurrentAccount` | query | no |
+  | `POST /auth/session/refresh` | `RefreshSession` | command (rotates, may audit reuse) | no |
+  | `POST /auth/session/logout` | `Logout` | command | no |
+  | `POST /auth/session/logout-all` | `LogoutAllDevices` | command | no |
+  | `POST /auth/email/verify` | `VerifyEmail` | command | yes |
+  | `POST /auth/email/resend-verification` | `ResendVerificationEmail` | command | no |
+  | `POST /auth/password/forgot` | `ForgotPassword` | command | yes |
+  | `POST /auth/password/reset` | `ResetPassword` | command | yes |
+  | `GET /auth/external/providers` | `GetExternalProviders` | query | no |
+  | `GET /auth/external/{provider}/start` | `StartExternalLogin` | query (resolves the scheme; Api issues the challenge) | no |
+  | `GET /auth/external/callback` | `HandleExternalLoginCallback` | command | no |
+  | `GET /auth/external/pending` | `GetPendingExternalLogin` | query | no |
+  | `POST /auth/external/complete` | `CompleteExternalLogin` | command | yes |
+  | `POST /auth/external/confirm-link` | `ConfirmProviderLink` | command | yes |
+  | `POST /auth/external/cancel` | none, Api-only (R19) | | |
+
+  The validator column follows the validators that exist today; the implementation keeps any
+  validator a slice already has.
+- **Inputs from HTTP**: a command carries what Api read from the request: `ClientInfo Client`,
+  `string? RefreshToken`, `ExternalIdentity? External`. The signed-in user comes from
+  `IUserContext`, as today.
+- **Sessions in the output**: `SessionIssuer.IssueAsync` returns
+  `IssuedSession(AccessToken, AccessTokenExpiresAt, AccountSummary Account, RefreshToken,
+  RefreshTokenLifetime)` instead of writing the cookie. Every signing-in response
+  (`RegisterResponse`, `LoginResponse`, `RefreshSessionResponse`, `CompleteExternalLoginResponse`,
+  `ConfirmProviderLinkResponse`) holds an `IssuedSession`. Api writes the cookie and returns the
+  unchanged `AuthSessionResponse` body. That body type lives in `Api/Endpoints/Account/Shared/`:
+  it is the HTTP contract several endpoints share (contract unchanged), not an Application
+  response, so the "response DTOs are not shared" rule holds.
+- **Callback outcomes**: `HandleExternalLoginCallbackResponse(Outcome, IssuedSession?)` with
+  `Outcome` = `SignedIn` | `ConsentRequired`. Refusals are `Result` errors: `LockedOutError` and
+  two new codes in `ExternalLoginErrors`, `Auth.ExternalLoginFailed` and
+  `Auth.ProviderEmailConflict`. They never reach a client as a problem body, because the callback
+  always redirects. The endpoint maps
+  each code to the redirect in the contract's callback table and deletes the external cookie for
+  everything except `ConsentRequired`.
+- **Cookie deletion**: decided by the endpoint from the result: logout and logout-all always
+  delete the refresh cookie; refresh deletes it on any failure; reset deletes it on success.
+- **Shared helpers** stay in `Features/Account/Shared/` as concrete classes the handlers call
+  explicitly: `SessionIssuer` (without the cookie), `SecurityAudit`, `EmailTokenIssuer`,
+  `ConsentRecorder`, `AccountTakeover`, `DeviceDescriptor`, `ClientInfo`,
+  `AccountValidationRules`. The e-mail records of R24 live in `Shared/Emails/`.
+- **Registration**: `AddApplication` scans the Application assembly and registers every class
+  whose name ends in `CommandHandler` or `QueryHandler`, and every `IValidator<T>`
+  implementation, as scoped services. It uses only `Microsoft.Extensions.DependencyInjection.Abstractions`
+  (no Scrutor, no FluentValidation DI package).
+
+## R23. Validation, transactions, logging and audit inside the handler (rev. e)
+
+- **Decision**: the validator is injected (no more `static readonly s_validator = new()`) and
+  called first in `HandleAsync`; a failure returns `ValidationError` as today. The handler keeps
+  its explicit `SaveChangesAsync` (and the explicit transaction in `ResetPassword`), calls
+  `SecurityAudit.WriteAsync` and the e-mail port itself, in this order: save, issue the Redis
+  session, audit, e-mail (R4, R14, FR-029). Nothing moves into endpoint filters.
+- **Why the order is unchanged**: the existing handlers already save before touching Redis, audit
+  after the commit (R14) and send e-mails last. The refactor keeps that and only removes HTTP
+  calls from between the steps.
+
+## R24. E-mail records, templates in Infrastructure, display time zone (rev. e)
+
+- **Port**: `Application/Common/Email/IEmailSender.SendAsync(OutgoingEmail email, ct)`.
+  `OutgoingEmail` is an abstract record with `UserId` and `To`. The Account module's records live
+  in `Features/Account/Shared/Emails/`:
+  `VerificationAndWelcomeEmail(UserId, To, Token)`, `VerificationEmail(UserId, To, Token)`,
+  `PasswordResetEmail(UserId, To, Token)`,
+  `ProviderLinkConfirmationEmail(UserId, To, Provider, Token)`, `WelcomeEmail(UserId, To)`,
+  `NewDeviceEmail(UserId, To, SignedInAt, DeviceType)`. They hold data only: no subject, no
+  HTML, no link, no time zone.
+- **Infrastructure/Email/**:
+  - `EmailSender : IEmailSender` renders the record, hands the `EmailMessage` to the transport, and
+    owns the safe send of FR-029: it catches every exception and logs the e-mail type and user id
+    only. The port's contract says it never throws (except on cancellation), so handlers don't
+    wrap the call;
+  - `AccountEmailRenderer` holds the six Polish templates from today's `AccountEmails`, text and
+    HTML, with HTML encoding, and builds links from `AppOptions.FrontendBaseUrl` (R19);
+  - `IEmailTransport` with `ConsoleEmailTransport` (Development only) and `DisabledEmailTransport`
+    (everywhere else, logs type and user id). These are today's `ConsoleEmailSender` and
+    `DisabledEmailSender` renamed; FR-028 is unchanged. `EmailMessage` moves here, since only
+    Infrastructure uses it.
+- **Display time zone** (FR-026a): `EmailOptions.DisplayTimeZone` (section `Email`, default
+  `Europe/Warsaw`). Its validator resolves the id with `TimeZoneInfo.FindSystemTimeZoneById`, and
+  `ValidateOnStart` makes an unknown zone stop the app at startup. The silent UTC fallback is
+  removed. .NET resolves IANA ids on Windows (through ICU) and on Linux App Service (tzdata), so the
+  same id works locally and in production. `NewDeviceEmail.SignedInAt` is the UTC time from
+  the handler's `TimeProvider`; the renderer converts it, so DST is applied by the zone rules.
+- **Tests**: `CapturingEmailSender` in `ApiFactory` becomes `CapturingEmailTransport`, so the
+  integration tests still see the rendered subject, body and links. New unit tests for the
+  renderer cover the time zone (a summer and a winter timestamp), HTML encoding of the provider
+  name and device type, and link building. A startup test checks that an unknown zone fails
+  options validation.
+- **Alternatives**: one port method per e-mail type (`IAccountEmails.SendWelcomeAsync`, …: grows
+  with every module); a templating engine such as Razor or Scriban (constitution VIII, six short
+  templates).
+
+## R25. Application package allowlist and architecture tests (rev. e)
+
+- **Decision** (`Liftingo.Application.csproj`): remove `<FrameworkReference
+  Include="Microsoft.AspNetCore.App" />`. Add `PackageReference`s for
+  `Microsoft.Extensions.DependencyInjection.Abstractions`, `Microsoft.Extensions.Logging.Abstractions`
+  and `Microsoft.Extensions.Options`, which came through the framework reference before. Keep
+  `Microsoft.EntityFrameworkCore` and `FluentValidation`. Versions go in
+  `Directory.Packages.props`, pinned to the 10.0.x patch that EF Core 10.0.11 already pulls in
+  (*verify* with `dotnet list package --include-transitive` so there is no downgrade warning).
+- **Architecture tests** (`Liftingo.ArchitectureTests`, new `LayerResponsibilityTests.cs`):
+  1. The Application assembly's referenced assemblies are a subset of: `Liftingo.Domain`,
+     `System.*`, `netstandard`, `Microsoft.EntityFrameworkCore` (+ `.Abstractions`),
+     `Microsoft.Extensions.DependencyInjection.Abstractions`,
+     `Microsoft.Extensions.Logging.Abstractions`, `Microsoft.Extensions.Options`,
+     `Microsoft.Extensions.Primitives` (pulled in by Options), `FluentValidation`. Checked with
+     `Assembly.GetReferencedAssemblies()`, which sees what the compiled code actually uses. The
+     exact transitive names are *verify* on the first build.
+  2. Application types do not depend on `Microsoft.AspNetCore.*`, `Microsoft.Extensions.Caching.*`,
+     `StackExchange.Redis` or `Microsoft.EntityFrameworkCore.SqlServer`.
+  3. Application has no type whose name ends in `Endpoint`; every class ending in `Handler` ends in
+     `CommandHandler` or `QueryHandler` and sits in a `Features.{Module}.{UseCase}` namespace.
+  4. A handler does not depend on another handler.
+  5. `Api` types other than `Program` and the classes in `Liftingo.Api.Extensions` do not depend on
+     `Liftingo.Infrastructure` (DI wiring only), and no `Api` type depends on
+     `IApplicationDbContext`.
+  The existing `DependencyGuardTests` stay.

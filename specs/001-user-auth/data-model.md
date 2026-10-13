@@ -1,6 +1,6 @@
 # Data Model: User Authentication
 
-**Feature**: `001-user-auth` | **Date**: 2026-10-12 (rev. d) | **Plan**: [plan.md](plan.md) | **Research**: [research.md](research.md)
+**Feature**: `001-user-auth` | **Date**: 2026-10-13 (rev. e) | **Plan**: [plan.md](plan.md) | **Research**: [research.md](research.md)
 
 All timestamps are `DateTimeOffset` in UTC, taken from an injected `TimeProvider`. All ids are
 `Guid`. Durations and limits come from configuration (FR-031); the defaults are listed in
@@ -11,7 +11,7 @@ Data lives in three places:
 | Store | What |
 |---|---|
 | SQL Server | accounts (Identity), external logins, consents, known devices, e-mail tokens, audit encryption keys, Data Protection key ring |
-| Redis | sessions and refresh tokens (R4) |
+| Redis | sessions and refresh tokens (R4), failed-login lockout for unknown e-mails (R21) |
 | Audit stream → Azure Monitor Log Analytics (sink built later) | security audit events, personal fields encrypted per user (R14) |
 
 ## Overview
@@ -30,6 +30,7 @@ Redis
 session:{sessionId}        hash   TTL = inactivity timeout
 rt:{tokenHash}             hash   TTL = inactivity timeout
 user-sessions:{userId}     set    TTL = inactivity timeout (refreshed on each new/renewed session)
+login-throttle:{emailHash} hash   TTL = lockout duration, set only when a lockout triggers
 
 Audit stream
 AuditRecord  (UserId plain, IP + device type encrypted with the user's AuditEncryptionKey)
@@ -282,6 +283,37 @@ Active ──TTL elapses──▶ gone (expired, no write)
 Revocation reasons (logout, logout-all, password reset, token reuse, account linked) are not
 stored in Redis; they go to the audit stream.
 
+## Redis: failed-login lockout for unknown e-mails (rev. e)
+
+Accessed only through `ILoginThrottle` (`Infrastructure/Sessions/RedisLoginThrottle.cs`), on the
+same connection and `liftingo:` prefix as the session store (R21, FR-013).
+
+### `login-throttle:{emailHash}` (hash)
+
+`emailHash` is the hex SHA-256 of the trimmed, upper-cased e-mail. The address itself is never
+stored.
+
+| Field | Type | Notes |
+|---|---|---|
+| `failures` | int | consecutive failed attempts since the last lockout |
+| `lockoutEnd` | ISO 8601 UTC, optional | set when `failures` reaches `Identity:Lockout:MaxFailedAccessAttempts` |
+
+| Operation | Effect | Atomic via |
+|---|---|---|
+| `GetLockoutEndAsync(email)` | `HGET lockoutEnd`; locked when it is after `now` | — |
+| `RegisterFailureAsync(email)` → `LockoutTriggered?` | refused (no count) while locked; otherwise clear `lockoutEnd`, `failures + 1`; at the limit set `failures = 0`, `lockoutEnd = now + Duration`, `PEXPIRE` = `Duration` | Lua script, `now` passed from `TimeProvider` |
+
+State transitions:
+
+```text
+(none) ──failure──▶ counting (failures 1..4, no TTL: no decay, FR-012)
+counting ──failure at limit──▶ locked (failures 0, lockoutEnd set, TTL = Duration)
+locked ──attempt──▶ locked (refused, not counted, TTL unchanged)
+locked ──TTL elapses──▶ (none) (counter zero and lockout over: the only way an entry disappears)
+```
+
+Connection and timeout errors become `SessionStoreUnavailableException` → `503` (FR-015c).
+
 ---
 
 ## Audit stream
@@ -335,7 +367,7 @@ later sink's setup applies it).
 | State | Where | Lifetime | Purpose |
 |---|---|---|---|
 | Pending external sign-in | encrypted cookie `Liftingo.External` (auth scheme) | `ExternalLogin:PendingTimeout` (10 min) | provider name, provider key, e-mail (if any), display name, device id, until consent (FR-021). Used for new users and for takeovers of unverified accounts (R10); whether an account exists is looked up again on `complete`, not stored |
-| Failed-login throttle for unknown e-mails | `IMemoryCache`, key = SHA-256 of normalised e-mail | lockout duration | equal lockout behaviour, no enumeration (R8) |
+| Failed-login throttle for unknown e-mails | Redis `login-throttle:{emailHash}` (see above) | until the counter is zero and the lockout has ended | equal lockout behaviour, no enumeration, same on every instance and across restarts (R8, R21) |
 | Refresh token | `liftingo_rt` cookie on the client | the session's remaining TTL (≤ 30 days sliding, ≤ 90 days absolute) | |
 
 ## Configuration
@@ -345,7 +377,7 @@ All values bound to validated options classes (`ValidateOnStart`, same pattern a
 
 | Key | Default | Requirement |
 |---|---|---|
-| `ConnectionStrings:Redis` | `localhost:6379` (dev) | sessions |
+| `ConnectionStrings:Redis` | `localhost:6379` (dev) | sessions, unknown-e-mail lockout |
 | `Identity:Password:*` | 8 / digit / special (existing) | FR-002 |
 | `Identity:Lockout:MaxFailedAccessAttempts` | 5 (existing) | FR-012 |
 | `Identity:Lockout:Duration` | `00:15:00` (existing) | FR-012 |
@@ -366,7 +398,8 @@ All values bound to validated options classes (`ValidateOnStart`, same pattern a
 | `Authentication:X:ClientId/ClientSecret` | user secrets, optional | FR-020 |
 | `Audit:Retention` | `90.00:00:00` | FR-014 (applied by the Log Analytics table setup) |
 | `Legal:DocumentsVersion` | e.g. `2026-10-01` | FR-004 |
-| `App:FrontendBaseUrl` | `https://localhost:4200` (dev) | links in e-mails, redirects |
+| `App:FrontendBaseUrl` | `https://localhost:4200` (dev) | links in e-mails (Infrastructure), redirects (Api) |
+| `Email:DisplayTimeZone` | `Europe/Warsaw` | FR-026a; an id unknown on the host stops startup |
 | `ForwardedHeaders:KnownProxies` | empty (dev) | correct audit IP behind App Service |
 
 ## Migration
@@ -376,4 +409,4 @@ One migration from `Liftingo.Infrastructure`, e.g. `AddUserAuthentication`: adds
 `UserConsents` (with `SupersededAt`), `KnownDevices` (with the `LastSeenAt` index), `EmailTokens`
 (with the provider columns, their check constraint and the `ExpiresAt` index),
 `AuditEncryptionKeys` (non-nullable `UserId`, unique) and `DataProtectionKeys`.
-Redis needs no migration.
+Redis needs no migration. Rev. e adds no SQL change.
