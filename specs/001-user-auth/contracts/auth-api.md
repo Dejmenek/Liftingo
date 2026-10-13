@@ -12,6 +12,13 @@ expects from a client is listed in [research R16](../research.md#r16-client-expe
 Sessions and refresh tokens are kept in Redis and audit events go to the encrypted audit stream
 ([data model](../data-model.md)); neither changes the HTTP shapes below.
 
+**Rev. e (2026-10-13)**: no route, status code, header, cookie or body changes. Each heading now
+names the `Api` endpoint (`Liftingo.Api/Endpoints/Account/{UseCase}Endpoint.cs`) and the
+Application slice folder it calls (research R19, R22). `ResultExtensions.ToProblem` moved to
+`Liftingo.Api/Http/` with the same output. The 2026-10-13 clarifications change behaviour only
+where noted: the `429 Auth.LockedOut` for an unknown e-mail now holds across restarts and
+instances (FR-013), and e-mails are sent after the save (FR-029).
+
 ## Conventions
 
 | Item | Value |
@@ -66,7 +73,7 @@ Shared error codes:
 
 ## Registration and login
 
-### `POST /auth/register` — `Register.cs`
+### `POST /auth/register` — `RegisterEndpoint` → `Features/Account/Register/`
 
 US1, FR-001…006, FR-016, FR-025.
 
@@ -95,7 +102,7 @@ loser of two simultaneous registrations of the same address).
 Side effects: user, three `UserConsent` rows, session, refresh token, `KnownDevice` (no new-device
 e-mail), verification token; then one verification+welcome e-mail.
 
-### `POST /auth/login` — `Login.cs`
+### `POST /auth/login` — `LoginEndpoint` → `Features/Account/Login/`
 
 US2, FR-007, FR-008, FR-012…014, FR-026.
 
@@ -108,7 +115,7 @@ Side effects: audit `Login` (always; for an unknown e-mail without user, IP or d
 `LockoutTriggered` on the 5th failure; session + token on success; new-device e-mail if the device
 is unknown, otherwise `KnownDevice.LastSeenAt` updated.
 
-### `GET /auth/me` 🔒 — `GetCurrentAccount.cs`
+### `GET /auth/me` 🔒 — `GetCurrentAccountEndpoint` → `Features/Account/GetCurrentAccount/`
 
 FR-019. Response `200`: the `account` object from `AuthSession`.
 
@@ -118,7 +125,7 @@ FR-019. Response `200`: the `account` object from `AuthSession`.
 
 All three live under `/auth/session/` so the cookie path covers exactly them.
 
-### `POST /auth/session/refresh` — `RefreshSession.cs`
+### `POST /auth/session/refresh` — `RefreshSessionEndpoint` → `Features/Account/RefreshSession/`
 
 FR-009…011. No body. Reads `liftingo_rt`.
 
@@ -128,14 +135,14 @@ Responses: `200` + `AuthSession` + rotated cookie · `401 Auth.SessionInvalid` +
 Reuse of an already-rotated token revokes that device's session only and writes a
 `RefreshTokenReuse` audit row (FR-011).
 
-### `POST /auth/session/logout` — `Logout.cs`
+### `POST /auth/session/logout` — `LogoutEndpoint` → `Features/Account/Logout/`
 
 FR-015. No body, no bearer needed (works after the access token expired). Reads `liftingo_rt`.
 
 Response: `204` always (idempotent), cookie cleared. If the cookie maps to an active session, it is
 revoked (`Logout`) and audited.
 
-### `POST /auth/session/logout-all` 🔒 — `LogoutAllDevices.cs`
+### `POST /auth/session/logout-all` 🔒 — `LogoutAllDevicesEndpoint` → `Features/Account/LogoutAllDevices/`
 
 FR-015a. No body. Deletes the user's `KnownDevice` rows, revokes every active session of the
 user, including the current one, audits `LogoutAllDevices`, clears the cookie. Response: `204`.
@@ -145,7 +152,7 @@ The next sign-in on any device sends a new-device e-mail.
 
 ## E-mail verification
 
-### `POST /auth/email/verify` — `VerifyEmail.cs`
+### `POST /auth/email/verify` — `VerifyEmailEndpoint` → `Features/Account/VerifyEmail/`
 
 US4, FR-017. Anonymous (the token identifies the account; a signed-in different user is ignored).
 
@@ -156,7 +163,7 @@ token's account is already verified, whatever the token's state (FR-017) · `400
 Auth.VerificationLinkInvalid` (UI offers to request a new link). Tokens are deleted 24 h after
 they stop being usable (FR-038), after which an old link is unknown and gets the `400`.
 
-### `POST /auth/email/resend-verification` 🔒 — `ResendVerificationEmail.cs`
+### `POST /auth/email/resend-verification` 🔒 — `ResendVerificationEmailEndpoint` → `Features/Account/ResendVerificationEmail/`
 
 FR-018, FR-037. No body.
 
@@ -167,7 +174,7 @@ sent). The e-mail is the verification-only template, without welcome text (FR-01
 
 ## Password reset
 
-### `POST /auth/password/forgot` — `ForgotPassword.cs`
+### `POST /auth/password/forgot` — `ForgotPasswordEndpoint` → `Features/Account/ForgotPassword/`
 
 US6, FR-032, FR-033, FR-037.
 
@@ -176,7 +183,7 @@ Request: `{ "email": "anna@example.pl" }`
 Response: `202` with an empty body for registered, unregistered and rate-limited addresses alike
 (SC-008). Only `400` for a malformed e-mail.
 
-### `POST /auth/password/reset` — `ResetPassword.cs`
+### `POST /auth/password/reset` — `ResetPasswordEndpoint` → `Features/Account/ResetPassword/`
 
 FR-034…036.
 
@@ -213,16 +220,16 @@ logs in normally.
 
 Provider names in routes: `google`, `facebook`, `x`.
 
-### `GET /auth/external/providers` — `GetExternalProviders.cs`
+### `GET /auth/external/providers` — `GetExternalProvidersEndpoint` → `Features/Account/GetExternalProviders/`
 
 Response `200`: `{ "providers": ["google", "facebook"] }` — configured providers only.
 
-### `GET /auth/external/{provider}/start?deviceId={uuid}` — `StartExternalLogin.cs`
+### `GET /auth/external/{provider}/start?deviceId={uuid}` — `StartExternalLoginEndpoint` → `Features/Account/StartExternalLogin/`
 
 Browser navigation, not XHR. Response: `302` to the provider (challenge) · `404
 Auth.ProviderUnavailable`.
 
-### `GET /auth/external/callback` — `HandleExternalLoginCallback.cs`
+### `GET /auth/external/callback` — `HandleExternalLoginCallbackEndpoint` → `Features/Account/HandleExternalLoginCallback/`
 
 Target of the provider handler's redirect. Reads the `Liftingo.External` cookie. Always responds
 `302` to the frontend:
@@ -242,7 +249,7 @@ account's e-mail.
 
 After `/auth/callback` the SPA calls `POST /auth/session/refresh` to get its access token.
 
-### `GET /auth/external/pending` — `GetPendingExternalLogin.cs`
+### `GET /auth/external/pending` — `GetPendingExternalLoginEndpoint` → `Features/Account/GetPendingExternalLogin/`
 
 Response `200`:
 `{ "provider": "google", "email": "anna@gmail.com", "emailRequired": false, "accountExists": false }`
@@ -250,7 +257,7 @@ Response `200`:
 `true` when the provider e-mail belongs to an unverified account, so the page can explain that the
 consents are asked again) · `400 Auth.ExternalLoginExpired`.
 
-### `POST /auth/external/complete` — `CompleteExternalLogin.cs`
+### `POST /auth/external/complete` — `CompleteExternalLoginEndpoint` → `Features/Account/CompleteExternalLogin/`
 
 US5, FR-021…025, FR-023a.
 
@@ -279,7 +286,7 @@ Other responses: `400` (validation) · `400 Auth.ExternalLoginExpired` (also aft
 pending timeout, FR-021) · `429 Auth.LockedOut` (takeover of a locked account). The external
 cookie is deleted in all three success cases.
 
-### `POST /auth/external/confirm-link` — `ConfirmProviderLink.cs`
+### `POST /auth/external/confirm-link` — `ConfirmProviderLinkEndpoint` → `Features/Account/ConfirmProviderLink/`
 
 FR-023a, R17. Anonymous; the token identifies the account.
 
@@ -304,13 +311,15 @@ Auth.ConsentRequired` (token stays usable) · `409 Auth.ProviderAlreadyLinked` (
 Side effects: login added; for an unverified account the takeover from the row above; token
 consumed; audit `ProviderLinked`; session, `KnownDevice` and new-device e-mail as for a login.
 
-### `POST /auth/external/cancel` — `CancelExternalLogin.cs`
+### `POST /auth/external/cancel` — `CancelExternalLoginEndpoint` (Api only, no slice)
 
 US5-2. Deletes the external cookie. Response `204`.
 
 ---
 
 ## RouteConsts additions
+
+`Liftingo.Api/Endpoints/RouteConsts.cs` (moved from `Application/Common/Routes/` in rev. e).
 
 ```csharp
 public static class Auth
@@ -336,5 +345,6 @@ public static class Auth
 ```
 
 The cookie path `/api/v1/auth/session` is built in `Api` from the version prefix plus a
-`RouteConsts.Auth.SessionPrefix = "/auth/session"` constant and handed to Application through the
-`Sessions` options (`PostConfigure` at startup), so the version is not hard-coded in Application.
+`RouteConsts.Auth.SessionPrefix = "/auth/session"` constant and kept in Api's
+`RefreshCookieOptions`. Since rev. e the cookie is read and written only by `Api`; Application
+never sees the path.
