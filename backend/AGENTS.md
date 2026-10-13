@@ -23,59 +23,202 @@
 
 ## Architecture
 
-Backend combines vertical slice architecture with Clean Architecture layering: four projects, dependencies point inward. `Domain` depends on nothing, `Application` depends only on `Domain`, and `Infrastructure`/`Api` depend on `Application` (`Api` also references `Infrastructure`, to wire up DI at startup).
+Backend combines vertical slice architecture with Clean Architecture layering: four projects, dependencies point inward. `Domain` depends on nothing, `Application` depends only on `Domain`, and `Infrastructure`/`Api` depend on `Application`. `Api` also references `Infrastructure`, but only to wire up DI at startup. Inside each project, code is grouped by product module (Account, Plans, WorkoutLog, ExerciseLibrary, Statistics, CardioMobility, Gamification, Social, Privacy).
 
-- **`Liftingo.Domain`**: entities, value objects, domain events, domain exceptions, grouped by module. No EF Core, no framework types.
-- **`Liftingo.Application`**: the vertical slices, one per endpoint, grouped by module (Account, Plans, WorkoutLog, ExerciseLibrary, Statistics, CardioMobility, Gamification, Social, Privacy). Also defines the interfaces it needs (`IApplicationDbContext`, `IAiClient`, `IEmailSender`, etc.); never references `Infrastructure`.
-- **`Liftingo.Infrastructure`**: implements those interfaces, e.g. `ApplicationDbContext : IApplicationDbContext` (EF Core), plus Identity, Hangfire jobs, the Microsoft Foundry client, email, and blob storage.
-- **`Liftingo.Api`**: Minimal API host. `Program.cs` maps endpoints and wires DI, registering `Infrastructure` implementations against the `Application` interfaces. No business logic here.
+### `Liftingo.Domain`: business rules
 
-Still no controller/service layer and no per-aggregate repositories: a slice handler depends on `IApplicationDbContext` and queries its `DbSet<T>` properties directly with LINQ, same as it would a `DbContext`. The interface exists only so `Application` can avoid referencing EF Core's concrete implementation in `Infrastructure`, not to add a repository abstraction.
+- Entities, aggregates, value objects, domain events, domain services and `DomainException`.
+- Pure logic with no I/O lives here too, e.g. the progression rules engine and the methodology validator.
+- References nothing beyond the .NET base class library: no EF Core, no ASP.NET Core, no NuGet packages.
 
-Every slice returns `Result<T>` for expected failures (validation, not found, conflict, rule violations); exceptions are for unexpected conditions only, not business logic flow.
+### `Liftingo.Application`: use cases
+
+- One slice per use case, in its own folder `Features/{Module}/{UseCase}/`: a command or query, its handler, its validator and its response DTO, one type per file.
+- Orchestrates domain objects. Business rules stay in `Domain`; the handler calls them.
+- Checks business authorization: does the user own this plan, is this profile visible, is the AI quota used up.
+- Defines the ports it needs: `IApplicationDbContext`, `IAiClient`, `IEmailSender`, `ICurrentUser`, `ISecurityAuditLog`, `ISessionStore`, and so on.
+- Allowed references: `Liftingo.Domain`, `Microsoft.EntityFrameworkCore` (core package only), `Microsoft.Extensions.DependencyInjection.Abstractions`, `Microsoft.Extensions.Logging.Abstractions`, `Microsoft.Extensions.Options`, `FluentValidation`. Anything else needs a constitution amendment.
+- Not allowed: the ASP.NET Core shared framework (`Microsoft.AspNetCore.*`), EF Core provider packages, Identity, StackExchange.Redis, Hangfire, Serilog, Azure SDKs, `Infrastructure`, `Api`.
+- No HTTP concerns: no `HttpContext`, `IResult`, status codes, cookies, redirects or route mapping. No raw SQL, no EF Core model configuration, no caching code (put caches behind a port).
+
+### `Liftingo.Infrastructure`: implementations of the ports
+
+- `ApplicationDbContext : IApplicationDbContext`, EF Core entity configurations and migrations.
+- ASP.NET Core Identity and the external auth providers.
+- Redis session store, caches and throttles.
+- External clients: Microsoft Foundry (AI), Azure Communication Services (e-mail), Azure Blob Storage, QuestPDF.
+- E-mail templates.
+- Security audit sink (Log Analytics) and the per-user key store used for crypto-shredding.
+- Hangfire job definitions. A job is a thin wrapper that calls an `Application` handler; the work itself stays in `Application`.
+- Options classes for the above and their binding.
+- No business rules.
+
+### `Liftingo.Api`: HTTP mapping and composition root
+
+- One endpoint per use case in `Endpoints/{Module}/{UseCase}Endpoint.cs`. An endpoint only binds the request, calls the handler and maps the `Result` to an HTTP response.
+- `RouteConsts`, route groups and the `/api/v1` prefix.
+- Mapping `Result` error types to status codes and `ProblemDetails`, plus the global exception handler.
+- Authentication schemes and authorization policies ("is the caller signed in", "does the token carry role X"). Ownership and visibility checks belong in `Application`.
+- Cookies (refresh token), redirects (external sign-in), and the `HttpContext`-based `ICurrentUser` and client info.
+- OpenAPI metadata, CORS, HTTP rate limiting.
+- `Program.cs`: DI wiring, registering `Infrastructure` implementations against `Application` ports.
+- No business logic, no database access.
+
+These rules are enforced by `Liftingo.ArchitectureTests`.
+
+## Use cases: CQRS without a mediator
+
+A **command** changes state. A **query** only reads and never writes. Each has a handler class that is registered in DI and injected straight into its endpoint (or Hangfire job). There is no mediator, dispatcher or pipeline in between.
+
+The handler is where the whole use case can be read from top to bottom. It calls these explicitly, in the order the use case needs them:
+
+1. its validator,
+2. business authorization checks,
+3. domain objects (loading aggregates through `IApplicationDbContext` and changing them through domain methods),
+4. the transaction: `SaveChangesAsync`, or an explicit transaction from the context when one use case spans several saves,
+5. log entries and audit events.
+
+None of this runs in endpoint filters, decorators or pipeline behaviors.
+
+Queries use `AsNoTracking` and project straight to the response DTO with `Select`. Commands load what they change, call domain methods and save.
+
+### Slice layout
+
+Each use case gets a folder. Every type in it is a separate file named after the type:
+
+```
+Liftingo.Application/Features/Plans/
+├── RenamePlan/
+│   ├── RenamePlanCommand.cs
+│   ├── RenamePlanCommandHandler.cs
+│   ├── RenamePlanCommandValidator.cs
+│   └── RenamePlanResponse.cs
+├── GetPlan/
+│   ├── GetPlanQuery.cs
+│   ├── GetPlanQueryHandler.cs
+│   └── GetPlanResponse.cs              # no validator: nothing to validate beyond the route id
+└── Shared/                             # code used by two or more Plans slices
+
+Liftingo.Api/Endpoints/Plans/
+├── RenamePlanEndpoint.cs
+├── RenamePlanRequest.cs                # only because the HTTP shape differs from the command
+└── GetPlanEndpoint.cs
+```
+
+- The `Command`/`Query` suffix shows at a glance which handlers may write. Use cases that look like reads but write something (sessions, tokens, audit records) are commands, e.g. `Login`, `RefreshSession`, `VerifyEmail`.
+- Validators are named after what they validate: `{UseCase}CommandValidator`, or `{UseCase}QueryValidator` when a query takes input worth checking (paging limits, filters).
+- There is no request type in `Application`. The command or query is the input. `Api` binds it directly, or declares its own `{UseCase}Request` when the HTTP shape differs (e.g. a route value plus a body).
+- Never give a type the same name as its folder (no class `RenamePlan` in `RenamePlan/`). C# resolves the name to the namespace, and you get confusing errors.
+
+Sharing between slices:
+
+- Code used by two or more slices of the same module goes in `Features/{Module}/Shared/`. Code used across modules goes in `Application/Common/`. Business rules go in `Domain` no matter how many slices use them.
+- Response DTOs are never shared, even when two look identical. Each one is that endpoint's contract and changes on its own schedule.
+- A handler never calls another handler. If two use cases need the same steps, move those steps to a class in `Shared/` (e.g. `SessionIssuer`) and call it from both.
+
+### Example
+
+```csharp
+// Liftingo.Application/Features/Plans/RenamePlan/RenamePlanCommand.cs
+public sealed record RenamePlanCommand(Guid PlanId, string Name);
+
+// Liftingo.Application/Features/Plans/RenamePlan/RenamePlanResponse.cs
+public sealed record RenamePlanResponse(Guid PlanId, string Name);
+
+// Liftingo.Application/Features/Plans/RenamePlan/RenamePlanCommandHandler.cs
+public sealed class RenamePlanCommandHandler(
+    IApplicationDbContext db,
+    ICurrentUser currentUser,
+    RenamePlanCommandValidator validator,
+    ILogger<RenamePlanCommandHandler> logger)
+{
+    public async Task<Result<RenamePlanResponse>> HandleAsync(RenamePlanCommand command, CancellationToken ct)
+    {
+        var validation = await validator.ValidateAsync(command, ct);
+        if (!validation.IsValid)
+            return Result.Failure<RenamePlanResponse>(validation.ToValidationError());
+
+        var plan = await db.Plans.SingleOrDefaultAsync(p => p.Id == command.PlanId, ct);
+        if (plan is null || plan.OwnerId != currentUser.Id)
+            return Result.Failure<RenamePlanResponse>(Error.NotFound("Plans.NotFound", "Plan not found."));
+
+        plan.Rename(command.Name);
+        await db.SaveChangesAsync(ct);
+
+        logger.LogInformation("User {UserId} renamed plan {PlanId}", currentUser.Id, plan.Id);
+        return new RenamePlanResponse(plan.Id, plan.Name);
+    }
+}
+```
+
+```csharp
+// Liftingo.Api/Endpoints/Plans/RenamePlanRequest.cs
+public sealed record RenamePlanRequest(string Name);
+
+// Liftingo.Api/Endpoints/Plans/RenamePlanEndpoint.cs
+app.MapPut(RouteConsts.Plans.Rename, async (
+        Guid planId, RenamePlanRequest body, RenamePlanCommandHandler handler, CancellationToken ct) =>
+    {
+        var result = await handler.HandleAsync(new RenamePlanCommand(planId, body.Name), ct);
+        return result.IsSuccess ? Results.Ok(result.Value) : result.ToProblem();
+    })
+    .RequireAuthorization();
+```
+
+### Data access
+
+Handlers depend on `IApplicationDbContext` and query its `DbSet<T>` properties directly with LINQ. There are no per-aggregate repositories. That makes the EF Core core package (`DbSet<T>`, async LINQ operators, `Include`, `AsNoTracking`, transactions from the context) the one framework dependency allowed in `Application`. It's a deliberate trade-off: the SQL Server provider, entity configuration and migrations stay in `Infrastructure`, and we don't need a repository layer.
 
 ## Error handling
 
 All errors leave the API as RFC 9457 `ProblemDetails` with a `traceId`. There are two failure mechanisms:
 
-- **`Result<T>`** for expected failures: validation, not found, conflict, rule violations the caller can fix.
+- **`Result<T>`** for expected failures: validation, not found, conflict, rule violations the caller can fix. Error types are HTTP-agnostic; `Api` maps each one to a status code.
 - **`DomainException`** for invariants the domain model refuses to break. The message is returned to clients, so write it for users and keep personal data out of it.
 
 Any other exception becomes a generic 500 with no message.
 
 ## File naming
 
-- One file per endpoint, named after the endpoint/use case in PascalCase (e.g. `CreateWorkoutSession.cs`, `GenerateAiPlan.cs`), not after the HTTP verb. Lives in `Liftingo.Application/Features/{Module}/`.
-- A slice file contains, in order: request DTO, response DTO, validator, and the endpoint handler/route registration.
-- Test files mirror the slice under test with a `Tests` suffix (e.g. `CreateWorkoutSessionTests.cs`).
-- Route constants live centrally in `RouteConsts` (`Liftingo.Application/Common/Routes/`), not inline as magic strings in each slice. They hold the route template without the version prefix (`/auth/me`, not `/api/v1/auth/me`); `Api` adds the prefix once.
+- Use cases are named in PascalCase after what they do (e.g. `CreateWorkoutSession`, `GenerateAiPlan`), not after the HTTP verb.
+- One type per file, file named after the type.
+- `Liftingo.Application/Features/{Module}/{UseCase}/` holds `{UseCase}Command.cs` or `{UseCase}Query.cs`, `{UseCase}CommandHandler.cs` or `{UseCase}QueryHandler.cs`, `{UseCase}CommandValidator.cs` or `{UseCase}QueryValidator.cs` (when needed) and `{UseCase}Response.cs`. See [Slice layout](#slice-layout).
+- Code shared by several slices in a module goes in `Features/{Module}/Shared/`.
+- `Liftingo.Api/Endpoints/{Module}/` holds `{UseCase}Endpoint.cs` and, only when the HTTP shape differs from the command or query, `{UseCase}Request.cs`.
+- Test files mirror the folder and class under test with a `Tests` suffix (e.g. `Features/Plans/RenamePlan/RenamePlanCommandHandlerTests.cs`, `RenamePlanCommandValidatorTests.cs`).
+- Route constants live centrally in `RouteConsts` (`Liftingo.Api/Endpoints/`), not inline as magic strings. They hold the route template without the version prefix (`/auth/me`, not `/api/v1/auth/me`); `Api` adds the prefix once.
 
 ## Code conventions
 
 - File-scoped namespaces everywhere.
-- Positional records for all request/response DTOs.
+- Positional records for commands, queries, response DTOs and HTTP request records.
 - Primary constructors for dependency injection.
 - Nullable reference types enabled.
-- Endpoint handlers are `async` and accept a `CancellationToken`.
-- FluentValidation validators are colocated in the same file as the endpoint they validate.
+- Handlers and endpoints are `async` and accept a `CancellationToken`.
+- Validators are injected into the handler and called explicitly at the start of `HandleAsync`.
 - Test naming: `[Method]_[Scenario]_[ExpectedResult]`.
 - Log messages must not contain e-mail addresses, names, body data or set values. Log the user id to identify a user.
 
 ## Patterns we use
 
-- `Result<T>` as the return type for all slice handlers; no throwing for expected/business failures.
-- `IApplicationDbContext` injected into slice handlers, queried directly with LINQ; no per-aggregate repositories.
-- Vertical slice architecture inside Clean Architecture layering: one file per endpoint, grouped by product module, with `Domain` → `Application` → `Infrastructure`/`Api` dependencies pointing inward.
-- `RouteConsts` for centralized, typed route definitions instead of inline route strings.
-- Bogus for realistic test data and seeding.
+- Clean Architecture layering with vertical slices: `Domain` ← `Application` ← `Infrastructure`/`Api`, grouped by product module.
+- CQRS without a mediator: command and query handlers injected directly into endpoints and jobs.
+- Ports and adapters: `Application` defines the interfaces, `Infrastructure` implements them.
+- `Result<T>` as the return type for all handlers; no throwing for expected/business failures.
+- `IApplicationDbContext` queried directly with LINQ.
+- Explicit validator, transaction, logging and audit calls inside the handler.
+- `RouteConsts` for centralized route definitions instead of inline route strings.
 - Minimal APIs for all HTTP endpoints.
+- Bogus for realistic test data and seeding.
 
 ## Patterns we don't use
 
 - Per-aggregate repository classes: handlers query `IApplicationDbContext`'s `DbSet<T>` properties directly instead.
 - AutoMapper or other mapping libraries: mapping between entities and DTOs is written by hand.
-- MediatR or other mediators: the endpoint handler is the entry point and does the work directly.
+- MediatR or other mediators, dispatchers or pipeline behaviors: the endpoint injects the handler and calls it.
+- Implicit cross-cutting behavior: validation, transactions, logging and audit are not done in endpoint filters or decorators.
 - Exceptions for business logic flow: expected failures (validation, not found, conflicts, rule violations) use `Result<T>` instead.
+- Business logic in `Api` or `Infrastructure`, or HTTP types in `Application`.
 
 ## Testing
 

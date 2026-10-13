@@ -31,8 +31,16 @@ Liftingo/
 │   │   ├── Liftingo.Application/
 │   │   │   ├── Features/
 │   │   │   │   ├── Account/
-│   │   │   │   │   ├── Register.cs
-│   │   │   │   │   ├── Login.cs
+│   │   │   │   │   ├── Login/
+│   │   │   │   │   │   ├── LoginCommand.cs
+│   │   │   │   │   │   ├── LoginCommandHandler.cs
+│   │   │   │   │   │   ├── LoginCommandValidator.cs
+│   │   │   │   │   │   └── LoginResponse.cs
+│   │   │   │   │   ├── GetCurrentAccount/
+│   │   │   │   │   │   ├── GetCurrentAccountQuery.cs
+│   │   │   │   │   │   ├── GetCurrentAccountQueryHandler.cs
+│   │   │   │   │   │   └── GetCurrentAccountResponse.cs
+│   │   │   │   │   ├── Shared/        # code used by two or more Account slices
 │   │   │   │   │   └── ...
 │   │   │   │   ├── Plans/
 │   │   │   │   ├── WorkoutLog/
@@ -45,18 +53,23 @@ Liftingo/
 │   │   │   └── Common/
 │   │   │       ├── Result/            # Result<T> pattern
 │   │   │       ├── Persistence/       # IApplicationDbContext
-│   │   │       ├── Routes/            # RouteConsts
-│   │   │       └── ...                # other cross-cutting interfaces (IAiClient, IEmailSender, ...)
+│   │   │       └── ...                # other ports (IAiClient, IEmailSender, ICurrentUser, ...)
 │   │   ├── Liftingo.Infrastructure/
 │   │   │   ├── Persistence/        # ApplicationDbContext (implements IApplicationDbContext), EF configurations, migrations
 │   │   │   ├── Identity/
-│   │   │   ├── Jobs/               # Hangfire job definitions
+│   │   │   ├── Jobs/               # Hangfire job definitions, thin wrappers over Application handlers
 │   │   │   ├── Ai/                 # Microsoft Foundry client
-│   │   │   ├── Email/              # Azure Communication Services
+│   │   │   ├── Email/              # Azure Communication Services, e-mail templates
 │   │   │   └── Storage/            # Azure Blob Storage, QuestPDF
 │   │   └── Liftingo.Api/
-│   │       ├── Program.cs
-│   │       └── ...                 # endpoint mapping, DI wiring, middleware
+│   │       ├── Program.cs          # composition root, DI wiring, middleware
+│   │       └── Endpoints/
+│   │           ├── RouteConsts.cs
+│   │           ├── Account/
+│   │           │   ├── LoginEndpoint.cs
+│   │           │   ├── GetCurrentAccountEndpoint.cs
+│   │           │   └── ...         # {UseCase}Request.cs only when the HTTP shape differs
+│   │           └── ...
 │   └── tests/
 │       ├── Liftingo.Api.UnitTests/
 │       └── Liftingo.Api.IntegrationTests/
@@ -68,7 +81,7 @@ Liftingo/
     └── Liftingo_PRD.md
 ```
 
-Backend follows vertical slice architecture inside a Clean Architecture project split: `Domain` → `Application` → `Infrastructure`/`Api`, dependencies point inward. See `backend/AGENTS.md` for details.
+Backend follows vertical slice architecture inside a Clean Architecture project split, with dependencies pointing inward: `Domain` holds business rules, `Application` holds use cases (CQRS without a mediator) and ports, `Infrastructure` implements the ports, and `Api` maps HTTP to use cases. See `backend/AGENTS.md` for details.
 
 ## Common commands
 
