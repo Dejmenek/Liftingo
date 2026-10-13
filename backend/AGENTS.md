@@ -4,7 +4,9 @@
 
 - .NET 10, ASP.NET Core Web API with Minimal APIs
 - EF Core with SQL Server (local dev) / Azure SQL (prod)
-- ASP.NET Core Identity + external providers (Google/Apple) + JWT auth with refresh tokens
+- ASP.NET Core Identity + external providers (Google/Facebook/Twitter (X)) + JWT auth with refresh tokens
+- Redis (StackExchange.Redis) for user sessions and refresh tokens; Azure Cache for Redis in prod
+- Azure Monitor Log Analytics for the security audit log (own custom table, separate from application logs)
 - Hangfire for scheduled/background jobs
 - FluentValidation for request validation
 - Serilog for structured logging
@@ -15,7 +17,7 @@
 - xUnit + NSubstitute for unit tests
 - TestContainers for integration tests
 - Bogus for test data seeding
-- Docker for local dev and integration test dependencies (SQL Server, etc.)
+- Docker for local dev and integration test dependencies (SQL Server, Redis)
 - Azure App Service for hosting
 - GitHub Actions for CI/CD (build, test, deploy)
 
@@ -46,7 +48,7 @@ Any other exception becomes a generic 500 with no message.
 - One file per endpoint, named after the endpoint/use case in PascalCase (e.g. `CreateWorkoutSession.cs`, `GenerateAiPlan.cs`), not after the HTTP verb. Lives in `Liftingo.Application/Features/{Module}/`.
 - A slice file contains, in order: request DTO, response DTO, validator, and the endpoint handler/route registration.
 - Test files mirror the slice under test with a `Tests` suffix (e.g. `CreateWorkoutSessionTests.cs`).
-- Route constants live centrally in `RouteConsts` (`Liftingo.Application/Common/Routes/`), not inline as magic strings in each slice. They hold the route template without the version prefix (`/ping`, not `/api/v1/ping`); `Api` adds the prefix once.
+- Route constants live centrally in `RouteConsts` (`Liftingo.Application/Common/Routes/`), not inline as magic strings in each slice. They hold the route template without the version prefix (`/auth/me`, not `/api/v1/auth/me`); `Api` adds the prefix once.
 
 ## Code conventions
 
@@ -83,7 +85,7 @@ Any other exception becomes a generic 500 with no message.
 
 Integration test infrastructure lives in `tests/Liftingo.Api.IntegrationTests/Infrastructure/`:
 
-- `SqlServerFixture`: starts one `MsSqlContainer` per test run, applies the EF Core migrations once and creates the `ApiFactory`. It also resets the data with Respawn and keeps the migrated schema.
+- `SqlServerFixture`: starts one `MsSqlContainer` and one Redis container per test run, applies the EF Core migrations once and creates the `ApiFactory`. It also resets the data with Respawn and keeps the migrated schema.
 - `ApiFactory`: `WebApplicationFactory<Program>` that runs in the `Testing` environment and replaces `ConnectionStrings:Default` with the container's connection string.
 - `IntegrationTestCollectionDefinition` and `IntegrationTestBase`: derive test classes from `IntegrationTestBase`. They join the shared collection, so there is only one container, and the database is reset before every test.
 - `Fakers/`: Bogus fakers for test data.
@@ -101,5 +103,8 @@ dotnet ef migrations add <Name> --project src/Liftingo.Infrastructure --startup-
 dotnet ef database update --project src/Liftingo.Infrastructure --startup-project src/Liftingo.Api
 dotnet test tests/Liftingo.Api.UnitTests
 dotnet test tests/Liftingo.Api.IntegrationTests
-docker compose up -d
+docker compose up -d   # Redis for dotnet run; the sign-in endpoints answer 503 without it
+dotnet user-secrets --project src/Liftingo.Api set "Jwt:SigningKey" "<at least 32 random bytes, base64>"   # once, before the first run
 ```
+
+`dotnet run` needs Redis (`docker compose up -d`) and the `Jwt:SigningKey` user secret, which is not in `appsettings.json`. To make a key, run `[Convert]::ToBase64String((1..32 | % { Get-Random -Max 256 }))` in PowerShell or `openssl rand -base64 32`. The integration tests start their own SQL Server and Redis containers and use a fixed test key, so they only need Docker.
