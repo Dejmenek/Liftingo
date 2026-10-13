@@ -10,7 +10,7 @@ namespace Liftingo.Api.Endpoints.Account.Shared;
 
 /// <summary>
 /// The short-lived <c>Liftingo.External</c> cookie that holds what the provider told us until the user finishes the
-/// sign-in (R9). Nothing about it is stored in the database before then (FR-021).
+/// sign-in. Nothing about it is stored in the database before then.
 /// </summary>
 internal static class ExternalLoginCookie
 {

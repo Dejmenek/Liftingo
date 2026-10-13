@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Liftingo.Application.Features.Account.Shared;
 
 /// <summary>
-/// Starts a signed-in session in two steps around the handler's commit: SQL first, Redis second (R4).
+/// Starts a signed-in session in two steps around the handler's commit: SQL first, Redis second.
 /// It never calls <c>SaveChangesAsync</c>; the handler does, so the commit stays visible in the slice.
 /// </summary>
 public sealed class SessionIssuer(

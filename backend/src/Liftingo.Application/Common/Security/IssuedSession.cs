@@ -2,7 +2,7 @@ namespace Liftingo.Application.Common.Security;
 
 /// <summary>
 /// A session that a use case has just started or renewed. Api puts the access token in the response body and the
-/// refresh token in the HttpOnly cookie (R22); Application never touches either transport.
+/// refresh token in the HttpOnly cookie; Application never touches either transport.
 /// </summary>
 /// <param name="AccessToken">The short-lived JWT.</param>
 /// <param name="AccessTokenExpiresAt">When the JWT expires.</param>

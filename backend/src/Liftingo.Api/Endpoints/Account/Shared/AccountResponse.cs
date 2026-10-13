@@ -2,7 +2,7 @@ using Liftingo.Application.Common.Security;
 
 namespace Liftingo.Api.Endpoints.Account.Shared;
 
-/// <summary>The <c>account</c> object of <see cref="AuthSessionResponse"/> (contract: <c>AuthSession</c>).</summary>
+/// <summary>The <c>account</c> object of <see cref="AuthSessionResponse"/>.</summary>
 public sealed record AccountResponse(
     Guid Id,
     string Email,

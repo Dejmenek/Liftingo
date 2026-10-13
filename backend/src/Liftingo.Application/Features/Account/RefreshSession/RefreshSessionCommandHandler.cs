@@ -6,7 +6,7 @@ using Liftingo.Domain.Account;
 
 namespace Liftingo.Application.Features.Account.RefreshSession;
 
-/// <summary>Rotates the refresh token (FR-009) and detects reuse of a rotated one (FR-011). A command: it writes to Redis.</summary>
+/// <summary>Rotates the refresh token and detects reuse of a rotated one. A command: it writes to Redis.</summary>
 public sealed class RefreshSessionCommandHandler(
     ISessionStore sessionStore,
     IIdentityService identity,

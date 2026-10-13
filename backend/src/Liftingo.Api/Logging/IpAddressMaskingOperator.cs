@@ -7,7 +7,7 @@ using Serilog.Enrichers.Sensitive;
 namespace Liftingo.Api.Logging;
 
 /// <summary>
-/// Masks IPv4 and IPv6 addresses in log properties and messages. A safety net for FR-030: code is not
+/// Masks IPv4 and IPv6 addresses in log properties and messages. A safety net: code is not
 /// meant to log addresses at all.
 /// </summary>
 internal sealed class IpAddressMaskingOperator : RegexMaskingOperator

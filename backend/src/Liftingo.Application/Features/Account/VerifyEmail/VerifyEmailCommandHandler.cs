@@ -10,7 +10,7 @@ using Liftingo.Domain.Account;
 namespace Liftingo.Application.Features.Account.VerifyEmail;
 
 /// <summary>
-/// Marks the e-mail of the token's account as verified (FR-017). The token identifies the account, so a different
+/// Marks the e-mail of the token's account as verified. The token identifies the account, so a different
 /// signed-in user is ignored.
 /// </summary>
 public sealed class VerifyEmailCommandHandler(
@@ -42,7 +42,7 @@ public sealed class VerifyEmailCommandHandler(
             return Result.Failure<VerifyEmailResponse>(s_linkInvalid);
         }
 
-        // Whatever the token's state: a verified account (provider sign-in, password reset) reports success (FR-017).
+        // Whatever the token's state: a verified account (provider sign-in, password reset) reports success.
         if (account.EmailVerified)
         {
             return new VerifyEmailResponse(VerifyEmailResponse.AlreadyVerified);

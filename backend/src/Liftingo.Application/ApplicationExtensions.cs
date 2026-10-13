@@ -25,7 +25,6 @@ public static class ApplicationExtensions
 
         foreach (Type type in typeof(ApplicationExtensions).Assembly.GetTypes().Where(IsConcreteClass))
         {
-        // Helpers shared by the Account slices (concrete classes, not abstractions over EF).
             foreach (Type handlerInterface in type.GetInterfaces().Where(IsHandlerInterface))
             {
                 services.AddScoped(handlerInterface, type);

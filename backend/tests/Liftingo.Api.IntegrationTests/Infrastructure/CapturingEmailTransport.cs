@@ -11,7 +11,7 @@ public sealed class CapturingEmailTransport : IEmailTransport
     private readonly List<EmailMessage> _messages = [];
     private readonly Lock _lock = new();
 
-    /// <summary>When set, <see cref="SendAsync"/> throws after capturing nothing, to test FR-029.</summary>
+    /// <summary>When set, <see cref="SendAsync"/> throws after capturing nothing, to test that a failed send does not fail the flow.</summary>
     public bool ThrowOnSend { get; set; }
 
     public IReadOnlyList<EmailMessage> Messages

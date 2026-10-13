@@ -2,7 +2,7 @@ using Liftingo.Application.Features.Account.Shared;
 
 namespace Liftingo.Api.Endpoints.Account.Shared;
 
-/// <summary>Reads what a use case needs to know about the caller from the request (R19).</summary>
+/// <summary>Reads what a use case needs to know about the caller from the request.</summary>
 internal static class ClientInfoReader
 {
     public const string DeviceIdHeader = "X-Device-Id";

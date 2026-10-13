@@ -13,8 +13,8 @@ using Liftingo.Domain.Account;
 namespace Liftingo.Application.Features.Account.CompleteExternalLogin;
 
 /// <summary>
-/// The consent step of a provider sign-in (FR-021): creates the account, takes over an unverified one, or asks the
-/// owner of a typed-in address to confirm the link by e-mail (the contract's <c>complete</c> table).
+/// The consent step of a provider sign-in: creates the account, takes over an unverified one, or asks the
+/// owner of a typed-in address to confirm the link by e-mail.
 /// </summary>
 public sealed class CompleteExternalLoginCommandHandler(
     CompleteExternalLoginCommandValidator validator,
@@ -53,7 +53,7 @@ public sealed class CompleteExternalLoginCommandHandler(
             return Result.Failure<CompleteExternalLoginResponse>(ExternalLoginErrors.Expired);
         }
 
-        // A provider e-mail is treated as verified. An e-mail the user typed is not (FR-023, FR-024).
+        // A provider e-mail is treated as verified. An e-mail the user typed is not.
         bool providerEmail = external.Email is not null;
         string? email = external.Email ?? command.Email?.Trim();
 
@@ -69,13 +69,13 @@ public sealed class CompleteExternalLoginCommandHandler(
             return await CreateAccountAsync(command, external, email, providerEmail, ct);
         }
 
-        // The provider vouches for the address, so the account is linked right away (R10).
+        // The provider vouches for the address, so the account is linked right away.
         if (providerEmail)
         {
             return await LinkAccountAsync(command, external, existing, ct);
         }
 
-        // The address was typed in: the owner has to confirm by e-mail before anything is linked (FR-023a, R17).
+        // The address was typed in: the owner has to confirm by e-mail before anything is linked.
         return await RequestLinkConfirmationAsync(external, existing, ct);
     }
 
@@ -86,7 +86,7 @@ public sealed class CompleteExternalLoginCommandHandler(
         bool providerEmail,
         CancellationToken ct)
     {
-        // Nothing below saves until the single SaveChangesAsync, so a failure leaves no half-created account (SC-007).
+        // Nothing below saves until the single SaveChangesAsync, so a failure leaves no half-created account.
         Result<Guid> created = await identity.CreateUserAsync(
             email,
             password: null,
@@ -119,11 +119,11 @@ public sealed class CompleteExternalLoginCommandHandler(
             return Result.Failure<CompleteExternalLoginResponse>(s_emailTaken);
         }
 
-        // SQL is committed; now Redis (session), then the e-mail (R4, FR-029).
+        // SQL is committed; now Redis (session), then the e-mail.
         IssuedSession session = await sessions.IssueAsync(userId, command.Client, ct);
 
-        // A typed e-mail gets the same combined welcome and verification e-mail as registration (FR-025). A provider
-        // e-mail gets the welcome-only e-mail instead (FR-025).
+        // A typed e-mail gets the same combined welcome and verification e-mail as registration. A provider
+        // e-mail gets the welcome-only e-mail instead.
         OutgoingEmail welcome = verificationToken is not null
             ? new VerificationAndWelcomeEmail(userId, email, verificationToken)
             : new WelcomeEmail(userId, email);
@@ -148,7 +148,7 @@ public sealed class CompleteExternalLoginCommandHandler(
             return Result.Failure<CompleteExternalLoginResponse>(new LockedOutError(lockedUntil));
         }
 
-        // An unverified account is taken over from whoever registered it (R10); a verified one just gets the login.
+        // An unverified account is taken over from whoever registered it; a verified one just gets the login.
         bool takeoverNeeded = !account.EmailVerified;
 
         await identity.AddLoginAsync(account.Id, external.Provider, external.ProviderKey, external.DisplayName, ct);
@@ -162,7 +162,7 @@ public sealed class CompleteExternalLoginCommandHandler(
                 ct);
         }
 
-        // A device the account has not used before gets a security notice once the session exists (FR-026).
+        // A device the account has not used before gets a security notice once the session exists.
         bool isNewDevice = await sessions.StageDeviceAsync(account.Id, client, SignInKind.SignIn, ct);
 
         await db.SaveChangesAsync(ct);
@@ -190,7 +190,7 @@ public sealed class CompleteExternalLoginCommandHandler(
         CancellationToken ct)
     {
         // The consents that came with the request are not recorded: the account has its own, and whoever opens the
-        // link may be someone else. At the hourly limit the token is null: same answer, no e-mail (FR-037).
+        // link may be someone else. At the hourly limit the token is null: same answer, no e-mail.
         string? token = await emailTokens.IssueAsync(
             account.Id,
             EmailTokenPurpose.ProviderLinkConfirmation,

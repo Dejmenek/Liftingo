@@ -11,9 +11,9 @@ using StackExchange.Redis;
 namespace Liftingo.Infrastructure.Sessions;
 
 /// <summary>
-/// <see cref="ILoginThrottle"/> over the session store's Redis (R21). One hash per address,
+/// <see cref="ILoginThrottle"/> over the session store's Redis. One hash per address,
 /// <c>liftingo:login-throttle:{hex SHA-256 of the trimmed, upper-cased address}</c>, with <c>failures</c> and
-/// <c>lockoutEnd</c> (Unix milliseconds, so the script can compare it). The address itself is never stored (FR-030).
+/// <c>lockoutEnd</c> (Unix milliseconds, so the script can compare it). The address itself is never stored.
 /// </summary>
 /// <remarks>
 /// The current time comes from <see cref="TimeProvider"/>, not from Redis, so a fake clock in tests moves the

@@ -12,8 +12,8 @@ using Liftingo.Domain.Account;
 namespace Liftingo.Application.Features.Account.ConfirmProviderLink;
 
 /// <summary>
-/// Links a provider to an existing account once its owner opens the confirmation link, and signs them in (FR-023a,
-/// R17). The token identifies the account.
+/// Links a provider to an existing account once its owner opens the confirmation link, and signs them in.
+/// The token identifies the account.
 /// </summary>
 public sealed class ConfirmProviderLinkCommandHandler(
     ConfirmProviderLinkCommandValidator validator,
@@ -48,7 +48,7 @@ public sealed class ConfirmProviderLinkCommandHandler(
         DateTimeOffset now = timeProvider.GetUtcNow();
         EmailToken? token = await emailTokens.FindAsync(command.Token, EmailTokenPurpose.ProviderLinkConfirmation, ct);
 
-        // 1. The token has to be usable (R17).
+        // 1. The token has to be usable.
         if (token is not { LoginProvider: { } loginProvider, ProviderKey: { } providerKey }
             || !token.IsUsable(now)
             || await identity.GetSummaryAsync(token.UserId, ct) is not { } account)
@@ -75,8 +75,8 @@ public sealed class ConfirmProviderLinkCommandHandler(
             return Result.Failure<ConfirmProviderLinkResponse>(new LockedOutError(lockedUntil));
         }
 
-        // 3. Opening the link proves the inbox, which takes an unverified account over from whoever registered it
-        // (R10). The required consents come first; without them the token stays usable.
+        // 3. Opening the link proves the inbox, which takes an unverified account over from whoever registered it.
+        // The required consents come first; without them the token stays usable.
         bool takeoverNeeded = !account.EmailVerified;
 
         if (takeoverNeeded && command is not { AcceptTermsAndAge: true, AcceptHealthData: true })
@@ -98,7 +98,7 @@ public sealed class ConfirmProviderLinkCommandHandler(
                 ct);
         }
 
-        // A device the account has not used before gets a security notice once the session exists (FR-026).
+        // A device the account has not used before gets a security notice once the session exists.
         bool isNewDevice = await sessions.StageDeviceAsync(account.Id, client, SignInKind.SignIn, ct);
 
         await db.SaveChangesAsync(ct);

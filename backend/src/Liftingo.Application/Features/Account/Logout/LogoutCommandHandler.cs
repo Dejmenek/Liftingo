@@ -7,7 +7,7 @@ using Liftingo.Domain.Account;
 namespace Liftingo.Application.Features.Account.Logout;
 
 /// <summary>
-/// Ends the session of the refresh token (FR-015). It works with the cookie alone, so a user whose access token has
+/// Ends the session of the refresh token. It works with the cookie alone, so a user whose access token has
 /// expired can still sign out.
 /// </summary>
 public sealed class LogoutCommandHandler(ISessionStore sessionStore, SecurityAudit audit) : ICommandHandler<LogoutCommand>

@@ -32,7 +32,7 @@ public class LogoutTests(SqlServerFixture fixture) : IntegrationTestBase(fixture
         Assert.NotNull(decrypted);
         Assert.False(string.IsNullOrEmpty(decrypted.DeviceType));
 
-        // Both the refresh cookie and the unexpired access token stop working at once (SC-003, FR-015b).
+        // Both the refresh cookie and the unexpired access token stop working at once.
         using HttpResponseMessage refresh = await client.RefreshWithCookieAsync(original.Value);
         using HttpResponseMessage me = await client.GetMeAsync(session.AccessToken);
         Assert.Equal(HttpStatusCode.Unauthorized, refresh.StatusCode);

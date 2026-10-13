@@ -5,7 +5,7 @@ using Liftingo.Application.Features.Account.ForgotPassword;
 
 namespace Liftingo.Api.Endpoints.Account;
 
-// No response body: registered, unregistered and rate-limited addresses all get the same empty 202 (SC-008).
+// No response body: registered, unregistered and rate-limited addresses all get the same empty 202.
 internal sealed class ForgotPasswordEndpoint : IEndpoint
 {
     public static void Map(RouteGroupBuilder group) =>

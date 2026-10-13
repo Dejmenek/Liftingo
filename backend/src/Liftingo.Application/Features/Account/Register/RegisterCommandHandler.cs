@@ -36,7 +36,7 @@ public sealed class RegisterCommandHandler(
             return Result.Failure<RegisterResponse>(validation.ToValidationError());
         }
 
-        // Stored and looked up trimmed (FR-005); the validator trims only to check.
+        // Stored and looked up trimmed; the validator trims only to check.
         string email = command.Email.Trim();
 
         if (await identity.FindByEmailAsync(email, ct) is not null)
@@ -44,7 +44,7 @@ public sealed class RegisterCommandHandler(
             return Result.Failure<RegisterResponse>(s_emailTaken);
         }
 
-        // Nothing below saves until the single SaveChangesAsync, so a failure leaves no half-created account (SC-007).
+        // Nothing below saves until the single SaveChangesAsync, so a failure leaves no half-created account.
         Result<Guid> created = await identity.CreateUserAsync(
             email,
             command.Password,
@@ -70,11 +70,11 @@ public sealed class RegisterCommandHandler(
         catch (UniqueConstraintViolationException)
         {
             // Two registrations of one address raced past the FindByEmailAsync check above. That is an unexpected
-            // condition the unique index resolves, and the handler turns it into a Result (constitution II).
+            // condition the unique index resolves, and the handler turns it into a Result.
             return Result.Failure<RegisterResponse>(s_emailTaken);
         }
 
-        // SQL is committed; now Redis (session), then the e-mail (R4, FR-029).
+        // SQL is committed; now Redis (session), then the e-mail.
         IssuedSession session = await sessions.IssueAsync(userId, command.Client, ct);
 
         if (verificationToken is not null)

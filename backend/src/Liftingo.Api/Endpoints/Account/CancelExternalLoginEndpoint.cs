@@ -3,8 +3,8 @@ using Liftingo.Api.Endpoints.Account.Shared;
 namespace Liftingo.Api.Endpoints.Account;
 
 /// <summary>
-/// The user declined at the consent step (US5-2): drop the external cookie and with it everything the provider told
-/// us. There is no use case behind it: no data, no rule, no audit (R19).
+/// The user declined at the consent step: drop the external cookie and with it everything the provider told
+/// us. There is no use case behind it: no data, no rule, no audit.
 /// </summary>
 internal sealed class CancelExternalLoginEndpoint : IEndpoint
 {

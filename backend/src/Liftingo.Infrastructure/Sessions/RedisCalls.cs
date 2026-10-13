@@ -9,7 +9,7 @@ namespace Liftingo.Infrastructure.Sessions;
 /// <summary>What every Redis-backed store here shares: the embedded Lua scripts and the outage mapping.</summary>
 internal static class RedisCalls
 {
-    // Redis connection and timeout errors become one exception that Api maps to 503 (FR-015c).
+    // Redis connection and timeout errors become one exception that Api maps to 503.
     public static async Task<T> GuardAsync<T>(Func<Task<T>> operation)
     {
         try

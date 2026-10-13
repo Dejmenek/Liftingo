@@ -27,7 +27,7 @@ internal static class SerilogExtensions
         return builder;
     }
 
-    // A safety net for FR-030 and constitution III: code logs user ids only, and this masks any e-mail
+    // A safety net: code logs user ids only, and this masks any e-mail
     // or IP address that slips into a property or a message anyway. It is set up in code, not in
     // appsettings, so configuration cannot turn it off. Only the two operators we need run: the default
     // IBAN and credit-card ones risk matching ids and timestamps.

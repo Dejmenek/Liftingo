@@ -210,7 +210,7 @@ public class LoginTests(SqlServerFixture fixture) : IntegrationTestBase(fixture)
             retryAfter = await AssertLockedOutAsync(locked);
         }
 
-        // A restart, or a second instance: a new host on the same Redis (FR-013).
+        // A restart, or a second instance: a new host on the same Redis.
         using ApiFactory second = CreateIsolatedFactory();
         using AuthTestClient other = second.CreateAuthClient();
 

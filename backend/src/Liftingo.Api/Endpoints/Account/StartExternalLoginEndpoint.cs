@@ -42,7 +42,7 @@ internal sealed class StartExternalLoginEndpoint : IEndpoint
         var properties = new AuthenticationProperties { RedirectUri = ExternalLoginPaths.Callback };
         properties.Items[ExternalLoginCookie.ProviderItem] = scheme;
 
-        // The device id is parsed by hand: a malformed value counts as a new device, like a bad X-Device-Id header (R6).
+        // The device id is parsed by hand: a malformed value counts as a new device, like a bad X-Device-Id header.
         if (Guid.TryParse(deviceId, CultureInfo.InvariantCulture, out Guid parsed) && parsed != Guid.Empty)
         {
             properties.Items[ExternalLoginCookie.DeviceIdItem] = parsed.ToString();

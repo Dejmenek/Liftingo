@@ -2,7 +2,7 @@ namespace Liftingo.Application.Common.Exceptions;
 
 /// <summary>
 /// A unique index rejected a write (SQL Server error 2601 or 2627). A handler turns it into a
-/// <c>Result</c> only where two requests can legitimately race for the same value (R2).
+/// <c>Result</c> only where two requests can legitimately race for the same value.
 /// </summary>
 public sealed class UniqueConstraintViolationException : Exception
 {

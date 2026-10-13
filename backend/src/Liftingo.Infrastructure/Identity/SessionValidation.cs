@@ -11,7 +11,7 @@ namespace Liftingo.Infrastructure.Identity;
 
 /// <summary>
 /// Ties an access token to its session: a token whose session was revoked or has expired is rejected at
-/// once (FR-015b), not when it runs out.
+/// once, not when it runs out.
 /// </summary>
 public static class SessionValidation
 {

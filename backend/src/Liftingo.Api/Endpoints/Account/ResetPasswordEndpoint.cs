@@ -6,7 +6,7 @@ using Liftingo.Application.Features.Account.ResetPassword;
 
 namespace Liftingo.Api.Endpoints.Account;
 
-// No response body and no session: the user signs in with the new password (FR-035).
+// No response body and no session: the user signs in with the new password.
 internal sealed class ResetPasswordEndpoint : IEndpoint
 {
     public static void Map(RouteGroupBuilder group) =>
