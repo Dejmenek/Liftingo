@@ -1,8 +1,10 @@
-using Liftingo.Infrastructure.Identity;
-using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
 
-namespace Liftingo.Api.UnitTests.Common;
+using Liftingo.Api.Security;
+
+using Microsoft.AspNetCore.Http;
+
+namespace Liftingo.Api.UnitTests.Security;
 
 public class UserContextTests
 {

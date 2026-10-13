@@ -1,10 +1,11 @@
-using Liftingo.Application.Common;
-using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
 
-namespace Liftingo.Infrastructure.Identity;
+using Liftingo.Application.Common;
 
-public sealed class UserContext(IHttpContextAccessor httpContextAccessor) : IUserContext
+namespace Liftingo.Api.Security;
+
+/// <summary>The signed-in user of the current request, read from the access token's claims.</summary>
+internal sealed class UserContext(IHttpContextAccessor httpContextAccessor) : IUserContext
 {
     private const string UserIdClaimType = ClaimTypes.NameIdentifier;
     private const string EmailVerifiedClaimType = "email_verified";
