@@ -3,7 +3,7 @@ using System.Net;
 
 using Liftingo.Api.IntegrationTests.Infrastructure;
 using Liftingo.Api.IntegrationTests.Infrastructure.Fakers;
-using Liftingo.Application.Common.Email;
+using Liftingo.Infrastructure.Email;
 using Liftingo.Application.Common.Routes;
 using Liftingo.Application.Common.Security;
 using Liftingo.Application.Features.Account.Shared;
@@ -37,7 +37,7 @@ public class AccountEmailTests(SqlServerFixture fixture) : IntegrationTestBase(f
         response.Dispose();
 
         EmailMessage message = Assert.Single(Factory.Emails.Messages);
-        Assert.Equal(AccountEmails.VerificationAndWelcomeTemplate, message.TemplateName);
+        Assert.Equal(AccountEmailRenderer.VerificationAndWelcomeTemplate, message.TemplateName);
     }
 
     [Fact]
@@ -50,7 +50,7 @@ public class AccountEmailTests(SqlServerFixture fixture) : IntegrationTestBase(f
 
         Assert.Equal(HttpStatusCode.OK, login.StatusCode);
         EmailMessage message = Assert.Single(Factory.Emails.Messages);
-        Assert.Equal(AccountEmails.NewDeviceTemplate, message.TemplateName);
+        Assert.Equal(AccountEmailRenderer.NewDeviceTemplate, message.TemplateName);
         Assert.Equal(email, message.To);
 
         string expectedTime = TimeZoneInfo
@@ -130,7 +130,7 @@ public class AccountEmailTests(SqlServerFixture fixture) : IntegrationTestBase(f
         using HttpResponseMessage login = await again.LoginAsync(email, password, device);
 
         Assert.Equal(HttpStatusCode.OK, login.StatusCode);
-        Assert.Equal(AccountEmails.NewDeviceTemplate, Assert.Single(Factory.Emails.Messages).TemplateName);
+        Assert.Equal(AccountEmailRenderer.NewDeviceTemplate, Assert.Single(Factory.Emails.Messages).TemplateName);
     }
 
     [Fact]
@@ -153,7 +153,7 @@ public class AccountEmailTests(SqlServerFixture fixture) : IntegrationTestBase(f
         using HttpResponseMessage login = await client.LoginAsync(request.Email, newPassword, device);
 
         Assert.Equal(HttpStatusCode.OK, login.StatusCode);
-        Assert.Equal(AccountEmails.NewDeviceTemplate, Assert.Single(Factory.Emails.Messages).TemplateName);
+        Assert.Equal(AccountEmailRenderer.NewDeviceTemplate, Assert.Single(Factory.Emails.Messages).TemplateName);
     }
 
     [Fact]
@@ -174,7 +174,7 @@ public class AccountEmailTests(SqlServerFixture fixture) : IntegrationTestBase(f
 
         Assert.Equal(HttpStatusCode.OK, confirm.StatusCode);
         EmailMessage message = Assert.Single(Factory.Emails.Messages);
-        Assert.Equal(AccountEmails.NewDeviceTemplate, message.TemplateName);
+        Assert.Equal(AccountEmailRenderer.NewDeviceTemplate, message.TemplateName);
         Assert.Equal(request.Email, message.To);
     }
 

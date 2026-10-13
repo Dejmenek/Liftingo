@@ -1,5 +1,7 @@
 using System.Globalization;
 
+using Liftingo.Application.Common.Configuration;
+
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 

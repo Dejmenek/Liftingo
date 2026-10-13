@@ -1,11 +1,13 @@
 using FluentValidation;
 using FluentValidation.Results;
 
+using Liftingo.Application.Common.Email;
 using Liftingo.Application.Common.Persistence;
 using Liftingo.Application.Common.Result;
 using Liftingo.Application.Common.Routes;
 using Liftingo.Application.Common.Security;
 using Liftingo.Application.Features.Account.Shared;
+using Liftingo.Application.Features.Account.Shared.Emails;
 using Liftingo.Domain.Account;
 
 using Microsoft.AspNetCore.Builder;
@@ -58,7 +60,8 @@ public sealed class Login : IEndpoint
         IApplicationDbContext db,
         FailedLoginThrottle throttle,
         SessionIssuer sessions,
-        AccountEmails emails,
+        IEmailSender emails,
+        TimeProvider timeProvider,
         SecurityAudit audit,
         CancellationToken ct)
     {
@@ -76,7 +79,7 @@ public sealed class Login : IEndpoint
 
         return account is null
             ? await HandleUnknownEmailAsync(email, request.Password, identity, throttle, audit, client, ct)
-            : await HandleKnownAccountAsync(http, account, request.Password, identity, db, sessions, emails, audit, client, ct);
+            : await HandleKnownAccountAsync(http, account, request.Password, identity, db, sessions, emails, timeProvider, audit, client, ct);
     }
 
     private static async Task<IResult> HandleKnownAccountAsync(
@@ -86,7 +89,8 @@ public sealed class Login : IEndpoint
         IIdentityService identity,
         IApplicationDbContext db,
         SessionIssuer sessions,
-        AccountEmails emails,
+        IEmailSender emails,
+        TimeProvider timeProvider,
         SecurityAudit audit,
         ClientInfo client,
         CancellationToken ct)
@@ -128,7 +132,7 @@ public sealed class Login : IEndpoint
 
                 if (isNewDevice)
                 {
-                    await emails.SendNewDeviceAsync(account.Id, account.Email, client.DeviceType, ct);
+                    await emails.SendAsync(new NewDeviceEmail(account.Id, account.Email, timeProvider.GetUtcNow(), client.DeviceType), ct);
                 }
 
                 return Results.Ok(response);

@@ -1,7 +1,7 @@
 using System.Net;
 
 using Liftingo.Api.IntegrationTests.Infrastructure;
-using Liftingo.Application.Common.Email;
+using Liftingo.Infrastructure.Email;
 using Liftingo.Application.Common.Routes;
 using Liftingo.Application.Features.Account.Shared;
 using Liftingo.Domain.Account;
@@ -42,7 +42,7 @@ public class ForgotPasswordTests(SqlServerFixture fixture) : IntegrationTestBase
         (await ForgotAsync(client, "nikt@example.pl")).Dispose();
 
         EmailMessage message = Assert.Single(Factory.Emails.Messages);
-        Assert.Equal(AccountEmails.PasswordResetTemplate, message.TemplateName);
+        Assert.Equal(AccountEmailRenderer.PasswordResetTemplate, message.TemplateName);
         Assert.Equal(session.Account.Id, message.UserId);
         Assert.Equal(session.Account.Email, message.To);
         Assert.Contains($"{ApiFactory.FrontendBaseUrl}/auth/reset-password?token=", message.TextBody, StringComparison.Ordinal);
@@ -122,7 +122,7 @@ public class ForgotPasswordTests(SqlServerFixture fixture) : IntegrationTestBase
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
         LogEvent failure = Assert.Single(
             factory.Logs.Events,
-            e => PropertyValue(e, "TemplateName") is string name && name == AccountEmails.PasswordResetTemplate);
+            e => PropertyValue(e, "TemplateName") is string name && name == AccountEmailRenderer.PasswordResetTemplate);
         Assert.Equal(session.Account.Id, PropertyValue(failure, "UserId"));
         Assert.DoesNotContain(
             factory.Logs.Events,

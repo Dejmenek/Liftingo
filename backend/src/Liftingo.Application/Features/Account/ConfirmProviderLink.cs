@@ -1,11 +1,13 @@
 using FluentValidation;
 using FluentValidation.Results;
 
+using Liftingo.Application.Common.Email;
 using Liftingo.Application.Common.Persistence;
 using Liftingo.Application.Common.Result;
 using Liftingo.Application.Common.Routes;
 using Liftingo.Application.Common.Security;
 using Liftingo.Application.Features.Account.Shared;
+using Liftingo.Application.Features.Account.Shared.Emails;
 using Liftingo.Domain.Account;
 
 using Microsoft.AspNetCore.Builder;
@@ -66,7 +68,7 @@ public sealed class ConfirmProviderLink : IEndpoint
         EmailTokenIssuer emailTokens,
         AccountTakeover takeover,
         SessionIssuer sessions,
-        AccountEmails emails,
+        IEmailSender emails,
         SecurityAudit audit,
         TimeProvider timeProvider,
         CancellationToken ct)
@@ -147,7 +149,7 @@ public sealed class ConfirmProviderLink : IEndpoint
 
         if (isNewDevice)
         {
-            await emails.SendNewDeviceAsync(account.Id, account.Email, client.DeviceType, ct);
+            await emails.SendAsync(new NewDeviceEmail(account.Id, account.Email, timeProvider.GetUtcNow(), client.DeviceType), ct);
         }
 
         return Results.Ok(response);

@@ -1,3 +1,4 @@
+using Liftingo.Application.Common.Configuration;
 using Liftingo.Application.Features.Account.Shared;
 
 using Microsoft.Extensions.Options;

@@ -1,3 +1,4 @@
+using Liftingo.Application.Common.Configuration;
 using Liftingo.Application.Common.Email;
 using Liftingo.Application.Common.Persistence;
 using Liftingo.Application.Common.Security;
@@ -46,7 +47,7 @@ public static class InfrastructureExtensions
         services.AddRedisSessions();
         services.AddIdentityServices(configuration);
         services.AddAuthenticationSchemes(configuration);
-        services.AddEmailSender(environment);
+        services.AddEmail(configuration, environment);
         services.AddSecurityAudit(environment);
 
         return services;
@@ -239,17 +240,22 @@ public static class InfrastructureExtensions
     private static bool IsWithinLifetime(DateTime utcNow, DateTime? notBefore, DateTime? expires) =>
         expires is not null && expires.Value > utcNow && (notBefore is null || notBefore.Value <= utcNow);
 
-    // The console sender prints the e-mail (links included) for the developer. Everywhere else mail is
-    // dropped until the Azure Communication Services sender exists.
-    private static void AddEmailSender(this IServiceCollection services, IHostEnvironment environment)
+    // E-mails are rendered here and handed to a transport. The console transport prints them (links included)
+    // for the developer; everywhere else mail is dropped until the Azure Communication Services transport exists.
+    private static void AddEmail(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
+        services.AddValidatedOptions<EmailOptions, EmailOptionsValidator>(configuration, EmailOptions.SectionName);
+
+        services.AddSingleton<AccountEmailRenderer>();
+        services.AddSingleton<IEmailSender, EmailSender>();
+
         if (environment.IsDevelopment())
         {
-            services.AddSingleton<IEmailSender, ConsoleEmailSender>();
+            services.AddSingleton<IEmailTransport, ConsoleEmailTransport>();
         }
         else
         {
-            services.AddSingleton<IEmailSender, DisabledEmailSender>();
+            services.AddSingleton<IEmailTransport, DisabledEmailTransport>();
         }
     }
 

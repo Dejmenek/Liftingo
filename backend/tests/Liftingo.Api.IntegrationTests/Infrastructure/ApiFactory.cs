@@ -1,4 +1,4 @@
-using Liftingo.Application.Common.Email;
+using Liftingo.Infrastructure.Email;
 using Liftingo.Infrastructure.Audit;
 
 using Microsoft.AspNetCore.Hosting;
@@ -41,7 +41,7 @@ public sealed class ApiFactory(
     /// <summary>The clock of the whole host (tokens, sessions, e-mail limits). Starts near real UTC now.</summary>
     public FakeTimeProvider Time { get; } = new(DateTimeOffset.UtcNow);
 
-    public CapturingEmailSender Emails { get; } = new();
+    public CapturingEmailTransport Emails { get; } = new();
 
     public CapturingAuditSink Audit { get; } = new();
 
@@ -71,8 +71,8 @@ public sealed class ApiFactory(
             // Replace the registrations (not add): the app registers the real ones.
             services.RemoveAll<TimeProvider>();
             services.AddSingleton<TimeProvider>(Time);
-            services.RemoveAll<IEmailSender>();
-            services.AddSingleton<IEmailSender>(Emails);
+            services.RemoveAll<IEmailTransport>();
+            services.AddSingleton<IEmailTransport>(Emails);
             services.RemoveAll<IAuditSink>();
             services.AddSingleton<IAuditSink>(Audit);
 

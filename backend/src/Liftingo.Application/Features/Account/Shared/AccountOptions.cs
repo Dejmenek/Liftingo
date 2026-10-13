@@ -73,13 +73,6 @@ public sealed class LoginLockoutOptions
     public TimeSpan Duration { get; init; }
 }
 
-public sealed class AppOptions
-{
-    public const string SectionName = "App";
-
-    public Uri? FrontendBaseUrl { get; init; }
-}
-
 internal static class OptionsValidation
 {
     public static void RequirePositive(string section, string property, TimeSpan value, List<string> failures)
@@ -194,21 +187,6 @@ public sealed class LegalOptionsValidator : IValidateOptions<LegalOptions>
             failures.Add(
                 $"'{LegalOptions.SectionName}:{nameof(LegalOptions.DocumentsVersion)}' must be at most " +
                 $"{UserConsent.DocumentVersionMaxLength} characters.");
-        }
-
-        return OptionsValidation.ToResult(failures);
-    }
-}
-
-public sealed class AppOptionsValidator : IValidateOptions<AppOptions>
-{
-    public ValidateOptionsResult Validate(string? name, AppOptions options)
-    {
-        List<string> failures = [];
-
-        if (options.FrontendBaseUrl is not { IsAbsoluteUri: true } uri || uri.Scheme != Uri.UriSchemeHttps)
-        {
-            failures.Add($"'{AppOptions.SectionName}:{nameof(AppOptions.FrontendBaseUrl)}' must be an absolute https URL.");
         }
 
         return OptionsValidation.ToResult(failures);
