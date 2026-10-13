@@ -51,6 +51,7 @@ Liftingo/
 │   │   │   │   ├── Social/
 │   │   │   │   └── Privacy/
 │   │   │   └── Common/
+│   │   │       ├── Messaging/         # ICommand, IQuery, ICommandHandler, IQueryHandler
 │   │   │       ├── Result/            # Result<T> pattern
 │   │   │       ├── Persistence/       # IApplicationDbContext
 │   │   │       └── ...                # other ports (IAiClient, IEmailSender, ICurrentUser, ...)
