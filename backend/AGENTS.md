@@ -229,9 +229,15 @@ Any other exception becomes a generic 500 with no message.
 Integration test infrastructure lives in `tests/Liftingo.Api.IntegrationTests/Infrastructure/`:
 
 - `SqlServerFixture`: starts one `MsSqlContainer` and one Redis container per test run, applies the EF Core migrations once and creates the `ApiFactory`. It also resets the data with Respawn and keeps the migrated schema.
-- `ApiFactory`: `WebApplicationFactory<Program>` that runs in the `Testing` environment and replaces `ConnectionStrings:Default` with the container's connection string.
-- `IntegrationTestCollectionDefinition` and `IntegrationTestBase`: derive test classes from `IntegrationTestBase`. They join the shared collection, so there is only one container, and the database is reset before every test.
+- `ApiFactory`: `WebApplicationFactory<Program>` that runs in the `Testing` environment, points the app at the SQL Server and Redis containers, and swaps in a `FakeTimeProvider`, `CapturingEmailTransport` and `CapturingAuditSink`.
+- `CapturingEmailTransport`: replaces the e-mail transport, so tests see the subject, body and links the real renderer produced.
+- `IntegrationTestCollectionDefinition` and `IntegrationTestBase`: derive test classes from `IntegrationTestBase`. They join the shared collection, so there is only one container, and the database and Redis are reset before every test.
+- `RedisSessionStoreTests` and `RedisLoginThrottleTests`: run the Lua scripts against the Redis container with their own fake clock.
 - `Fakers/`: Bogus fakers for test data.
+
+Unit tests mirror the source folders. For example, the validator of `Features/Account/Register/` is tested in `Features/Account/Register/RegisterCommandValidatorTests.cs`.
+
+`Liftingo.ArchitectureTests` has two kinds of rules. `LayerDependencyTests` and `DependencyGuardTests` check which layer may reference which. `LayerResponsibilityTests` checks what each layer may contain: Application references only its allowed assemblies, has no endpoints, and has only command and query handlers in use-case folders that never call each other. Api uses Infrastructure only in its wiring classes and never touches `IApplicationDbContext`.
 
 Test groups (xUnit collections) never run in parallel (`[assembly: Parallelization(Mode = ParallelMode.None)]`), and tests inside a group run one at a time. Integration tests need Docker running.
 
