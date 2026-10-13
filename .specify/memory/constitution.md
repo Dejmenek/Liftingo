@@ -57,6 +57,12 @@ endpoint or job.
 - Code used by two or more slices of a module MUST go in `Features/{Module}/Shared/`; code used
   across modules goes in `Application/Common/`, and business rules go in `Domain`. Response DTOs
   MUST NOT be shared between slices, and a handler MUST NOT call another handler.
+- Commands MUST implement `ICommand` or `ICommand<TResponse>` and queries `IQuery<TResponse>`;
+  handlers MUST implement `ICommandHandler<TCommand>`, `ICommandHandler<TCommand, TResponse>` or
+  `IQueryHandler<TQuery, TResponse>` from `Application/Common/Messaging`. Endpoints and jobs inject
+  the handler interface. Only the handler itself MAY be registered against a handler interface:
+  the interfaces fix the handler's shape and MUST NOT become a dispatcher or a place for
+  decorators.
 - The handler MUST make the use case's flow visible from top to bottom. It MUST explicitly call
   its validator, check business authorization, orchestrate domain objects, own the transaction
   (`SaveChangesAsync`, or an explicit transaction when one use case spans several saves), write
@@ -224,6 +230,14 @@ The following stack is binding; deviations require a constitution amendment.
   change set or a linked one.
 - EF Core schema changes MUST be delivered as migrations from `Liftingo.Infrastructure`.
 - Written project text (issues, PR descriptions, docs) SHOULD be run through the humanizer skill.
+- Code comments explain why the code is the way it is. They MUST NOT repeat what the code says,
+  describe how the code used to work, or cite requirement ids (`FR-…`, `SC-…`, research `R…`);
+  ids belong in the spec, and the comment states the reason itself.
+- An analyzer rule that does not fit the codebase's design MUST be turned off in `.editorconfig`
+  for the whole backend, with a comment naming the rule and the reason, instead of being
+  suppressed at each occurrence. `[SuppressMessage]` (with a justification) or a `#pragma` is
+  for a one-off exception to a rule worth keeping; a path-scoped `.editorconfig` section is for a
+  rule that still catches real mistakes elsewhere.
 - `AGENTS.md` files hold day-to-day commands and conventions; if they conflict with this
   constitution, the constitution prevails and the `AGENTS.md` MUST be corrected.
 
@@ -246,4 +260,4 @@ frontend) are the source of runtime development guidance.
 - **Dependency drift**: when a PRD requirement or tech-stack choice changes, this constitution and
   the relevant `AGENTS.md` MUST be updated in the same change.
 
-**Version**: 2.0.0 | **Ratified**: 2026-10-06 | **Last Amended**: 2026-10-13
+**Version**: 2.1.0 | **Ratified**: 2026-10-06 | **Last Amended**: 2026-10-13
