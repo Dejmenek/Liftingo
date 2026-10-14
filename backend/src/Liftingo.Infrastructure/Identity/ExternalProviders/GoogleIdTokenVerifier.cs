@@ -57,8 +57,7 @@ internal sealed partial class GoogleIdTokenVerifier(
             GoogleProviderOptions.LoginProvider,
             payload.Subject,
             string.IsNullOrEmpty(email) ? null : email,
-            payload.Name,
-            DeviceId: null);
+            payload.Name);
     }
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "A {Provider} token could not be verified ({ExceptionType}).")]

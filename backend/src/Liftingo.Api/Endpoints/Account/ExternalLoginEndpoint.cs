@@ -2,51 +2,50 @@ using Liftingo.Api.Endpoints.Account.Shared;
 using Liftingo.Api.Http;
 using Liftingo.Application.Common.Messaging;
 using Liftingo.Application.Common.Result;
-using Liftingo.Application.Common.Security;
-using Liftingo.Application.Features.Account.CompleteExternalLogin;
+using Liftingo.Application.Features.Account.ExternalLogin;
 
 namespace Liftingo.Api.Endpoints.Account;
 
-internal sealed class CompleteExternalLoginEndpoint : IEndpoint
+internal sealed class ExternalLoginEndpoint : IEndpoint
 {
     private static readonly ExternalLoginLinkConfirmationResponse s_linkConfirmationSent =
         new(ExternalLoginLinkConfirmationResponse.LinkConfirmationSent);
 
     public static void Map(RouteGroupBuilder group) =>
-        group.MapPost(RouteConsts.Auth.CompleteExternalLogin, HandleAsync)
+        group.MapPost(RouteConsts.Auth.ExternalLogin, HandleAsync)
             .AllowAnonymous()
             .Produces<AuthSessionResponse>(StatusCodes.Status201Created)
             .Produces<AuthSessionResponse>(StatusCodes.Status200OK)
             .Produces<ExternalLoginLinkConfirmationResponse>(StatusCodes.Status202Accepted)
             .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status429TooManyRequests);
 
     private static async Task<IResult> HandleAsync(
-        CompleteExternalLoginRequest request,
+        string provider,
+        ExternalLoginRequest request,
         HttpContext http,
-        ICommandHandler<CompleteExternalLoginCommand, CompleteExternalLoginResponse> handler,
+        ICommandHandler<ExternalLoginCommand, ExternalLoginResponse> handler,
         RefreshTokenCookie refreshCookie,
         CancellationToken ct)
     {
-        ExternalIdentity? external = await ExternalLoginCookie.ReadAsync(http);
-
-        var command = new CompleteExternalLoginCommand(
+        var command = new ExternalLoginCommand(
+            provider,
+            request.Token,
             request.AcceptTermsAndAge,
             request.AcceptHealthData,
             request.AcceptMarketing,
             request.Email,
-            external,
-            ClientInfoReader.ReadPreferringHeader(http, external?.DeviceId));
+            ClientInfoReader.Read(http));
 
-        Result<CompleteExternalLoginResponse> result = await handler.HandleAsync(command, ct);
+        Result<ExternalLoginResponse> result = await handler.HandleAsync(command, ct);
 
         if (result.IsFailure)
         {
             return result.ToProblem();
         }
-
-        await ExternalLoginCookie.ClearAsync(http);
 
         if (result.Value.Session is not { } session)
         {
@@ -56,7 +55,7 @@ internal sealed class CompleteExternalLoginEndpoint : IEndpoint
         refreshCookie.Append(http.Response, session);
         AuthSessionResponse body = AuthSessionResponse.From(session);
 
-        return result.Value.Outcome == CompleteExternalLoginOutcome.AccountCreated
+        return result.Value.Outcome == ExternalLoginOutcome.AccountCreated
             ? Results.Json(body, statusCode: StatusCodes.Status201Created)
             : Results.Ok(body);
     }

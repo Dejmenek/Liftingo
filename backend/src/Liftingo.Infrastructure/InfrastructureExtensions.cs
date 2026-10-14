@@ -6,6 +6,7 @@ using Liftingo.Application.Features.Account.Shared;
 using Liftingo.Infrastructure.Audit;
 using Liftingo.Infrastructure.Email;
 using Liftingo.Infrastructure.Identity;
+using Liftingo.Infrastructure.Identity.ExternalProviders;
 using Liftingo.Infrastructure.Persistence;
 using Liftingo.Infrastructure.Sessions;
 
@@ -45,6 +46,7 @@ public static class InfrastructureExtensions
         services.AddAccountOptions(configuration);
         services.AddRedisSessions();
         services.AddIdentityServices(configuration);
+        services.AddExternalProviders(configuration);
         services.AddEmail(configuration, environment);
         services.AddSecurityAudit(environment);
 
@@ -125,8 +127,7 @@ public static class InfrastructureExtensions
             .Bind(configuration.GetSection(IdentitySecurityOptions.SectionName))
             .ValidateOnStart();
 
-        // Data Protection wraps the audit keys and encrypts the external-login cookie, so its key ring
-        // has to survive restarts.
+        // Data Protection wraps the audit keys, so its key ring has to survive restarts.
         services.AddDataProtection()
             .SetApplicationName("Liftingo")
             .PersistKeysToDbContext<ApplicationDbContext>();

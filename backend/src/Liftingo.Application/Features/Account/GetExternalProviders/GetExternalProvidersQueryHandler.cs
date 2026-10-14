@@ -10,7 +10,8 @@ public sealed class GetExternalProvidersQueryHandler(IExternalProviderCatalog ca
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        Result<GetExternalProvidersResponse> result = new GetExternalProvidersResponse(catalog.RouteNames);
+        Result<GetExternalProvidersResponse> result = new GetExternalProvidersResponse(
+            [.. catalog.Providers.Select(provider => new ExternalProviderSummary(provider.RouteName, provider.ClientId))]);
 
         return Task.FromResult(result);
     }

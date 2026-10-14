@@ -81,8 +81,7 @@ internal sealed partial class FacebookTokenVerifier(
             LoginProvider,
             me.Id,
             string.IsNullOrEmpty(email) ? null : email,
-            me.Name,
-            DeviceId: null);
+            me.Name);
     }
 
     internal static string AppSecretProof(string token, string appSecret) =>

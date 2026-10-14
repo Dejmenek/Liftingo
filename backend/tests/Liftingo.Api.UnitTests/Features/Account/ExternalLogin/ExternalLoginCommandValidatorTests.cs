@@ -1,47 +1,38 @@
 using FluentValidation.Results;
 
-using Liftingo.Application.Features.Account.CompleteExternalLogin;
+using Liftingo.Application.Features.Account.ExternalLogin;
 using Liftingo.Application.Features.Account.Shared;
 
-namespace Liftingo.Api.UnitTests.Features.Account.CompleteExternalLogin;
+namespace Liftingo.Api.UnitTests.Features.Account.ExternalLogin;
 
-public class CompleteExternalLoginCommandValidatorTests
+public class ExternalLoginCommandValidatorTests
 {
-    private static readonly CompleteExternalLoginCommandValidator s_validator = new();
+    private static readonly ExternalLoginCommandValidator s_validator = new();
 
     [Fact]
-    public async Task Validate_ConsentsAndNoEmail_Passes()
+    public async Task Validate_TokenAndNothingElse_Passes()
     {
         ValidationResult result = await s_validator.ValidateAsync(Request(), TestContext.Current.CancellationToken);
 
         Assert.True(result.IsValid);
     }
 
-    [Fact]
-    public async Task Validate_TermsNotAccepted_FailsWithTermsRequired()
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task Validate_EmptyToken_FailsWithTokenRequired(string token)
     {
-        ValidationResult result = await s_validator.ValidateAsync(
-            Request(acceptTermsAndAge: false),
-            TestContext.Current.CancellationToken);
+        ValidationResult result = await s_validator.ValidateAsync(Request(token: token), TestContext.Current.CancellationToken);
 
-        Assert.Equal("Validation.TermsRequired", Assert.Single(result.Errors).ErrorCode);
+        Assert.Equal("Validation.TokenRequired", Assert.Single(result.Errors).ErrorCode);
     }
 
     [Fact]
-    public async Task Validate_HealthDataNotAccepted_FailsWithHealthDataRequired()
+    public async Task Validate_ConsentsDeclined_Passes()
     {
+        // Whether consents are needed depends on the account, so the handler answers that, not the validator.
         ValidationResult result = await s_validator.ValidateAsync(
-            Request(acceptHealthData: false),
-            TestContext.Current.CancellationToken);
-
-        Assert.Equal("Validation.HealthDataRequired", Assert.Single(result.Errors).ErrorCode);
-    }
-
-    [Fact]
-    public async Task Validate_MarketingDeclined_Passes()
-    {
-        ValidationResult result = await s_validator.ValidateAsync(
-            Request(acceptMarketing: false),
+            Request(acceptTermsAndAge: false, acceptHealthData: false),
             TestContext.Current.CancellationToken);
 
         Assert.True(result.IsValid);
@@ -98,10 +89,17 @@ public class CompleteExternalLoginCommandValidatorTests
         Assert.True(result.IsValid);
     }
 
-    private static CompleteExternalLoginCommand Request(
-        bool acceptTermsAndAge = true,
-        bool acceptHealthData = true,
-        bool acceptMarketing = true,
+    private static ExternalLoginCommand Request(
+        string token = "provider-token",
+        bool? acceptTermsAndAge = null,
+        bool? acceptHealthData = null,
         string? email = null) =>
-        new(acceptTermsAndAge, acceptHealthData, acceptMarketing, email, External: null, new ClientInfo("203.0.113.5", "Chrome, Windows, komputer", Guid.NewGuid()));
+        new(
+            "google",
+            token,
+            acceptTermsAndAge,
+            acceptHealthData,
+            AcceptMarketing: null,
+            email,
+            new ClientInfo("203.0.113.5", "Chrome, Windows, komputer", Guid.NewGuid()));
 }

@@ -34,27 +34,6 @@ public class ClientInfoTests
     }
 
     [Fact]
-    public void Create_OverrideGiven_WinsOverTheHeader()
-    {
-        var fromHeader = Guid.NewGuid();
-        var fromStart = Guid.NewGuid();
-
-        ClientInfo client = ClientInfo.Create(null, ChromeOnWindows, fromHeader.ToString(), fromStart);
-
-        Assert.Equal(fromStart, client.DeviceId);
-    }
-
-    [Fact]
-    public void Create_EmptyOverride_FallsBackToTheHeader()
-    {
-        var fromHeader = Guid.NewGuid();
-
-        ClientInfo client = ClientInfo.Create(null, ChromeOnWindows, fromHeader.ToString(), Guid.Empty);
-
-        Assert.Equal(fromHeader, client.DeviceId);
-    }
-
-    [Fact]
     public void Create_NoUserAgent_UsesTheUnknownLabels()
     {
         ClientInfo client = ClientInfo.Create(null, null, null);
