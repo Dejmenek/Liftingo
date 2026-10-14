@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Liftingo: provider sign-in (development)</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 52rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.4; }
+    section { border: 1px solid #ccc; border-radius: 6px; padding: 0.75rem 1rem; margin-bottom: 1rem; }
+    h2 { font-size: 1.05rem; margin: 0 0 0.5rem; }
+    label { display: block; margin: 0.25rem 0; }
+    input[type=email], textarea { width: 100%; box-sizing: border-box; font-family: ui-monospace, monospace; }
+    button { margin: 0.25rem 0.5rem 0.25rem 0; padding: 0.35rem 0.8rem; }
+    pre { background: #f5f5f5; padding: 0.75rem; white-space: pre-wrap; word-break: break-all; max-height: 30rem; overflow: auto; }
+    .note { color: #555; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <h1>Provider sign-in (development only)</h1>
+  <p class="note">
+    Signs in at Google or Facebook in this browser and posts the provider token to
+    <code>POST /api/v1/auth/external/{provider}/login</code>. This origin has to be an authorized JavaScript origin
+    of the Google client and an allowed domain of the Facebook app, or their sign-in windows refuse to open.
+  </p>
+
+  <section>
+    <h2>1. Sign in at the provider</h2>
+    <div id="google-button"></div>
+    <button id="facebook-button" type="button" hidden>Continue with Facebook</button>
+    <p id="no-providers" class="note" hidden>
+      No provider is configured. Set <code>Authentication:Google:ClientId</code>, or
+      <code>Authentication:Facebook:AppId</code> and <code>AppSecret</code>, in the user secrets and restart.
+    </p>
+  </section>
+
+  <section>
+    <h2>2. Consents and e-mail (sent with every request, as they are now)</h2>
+    <label><input id="accept-terms" type="checkbox"> acceptTermsAndAge (18+, terms and privacy policy)</label>
+    <label><input id="accept-health" type="checkbox"> acceptHealthData</label>
+    <label><input id="accept-marketing" type="checkbox"> acceptMarketing</label>
+    <label>email (read only when the provider gave none)
+      <input id="email" type="email" autocomplete="off">
+    </label>
+  </section>
+
+  <section>
+    <h2>3. Token</h2>
+    <p>Provider: <strong id="provider-name">none yet</strong></p>
+    <textarea id="token" rows="5" spellcheck="false" placeholder="The last provider token appears here. Edit it to try a tampered one."></textarea>
+    <button id="send-again" type="button">Send again</button>
+    <p class="note">X-Device-Id (kept in localStorage): <code id="device-id"></code></p>
+  </section>
+
+  <section>
+    <h2>Responses</h2>
+    <button id="clear-log" type="button">Clear</button>
+    <pre id="log"></pre>
+  </section>
+
+  <script>
+    'use strict';
+
+    // Keep in step with Authentication:Facebook:GraphApiVersion on the server.
+    const facebookGraphVersion = 'v26.0';
+    const deviceIdKey = 'liftingo.deviceId';
+
+    const $ = id => document.getElementById(id);
+    const tokenField = $('token');
+    const logView = $('log');
+
+    let deviceId = localStorage.getItem(deviceIdKey);
+    if (!deviceId) {
+      deviceId = crypto.randomUUID();
+      localStorage.setItem(deviceIdKey, deviceId);
+    }
+    $('device-id').textContent = deviceId;
+
+    // The token lives only in this page: in this variable's provider and the token field.
+    let currentProvider = null;
+
+    function log(text) {
+      logView.textContent = `[${new Date().toLocaleTimeString()}] ${text}\n\n` + logView.textContent;
+    }
+
+    function useToken(provider, token) {
+      currentProvider = provider;
+      $('provider-name').textContent = provider;
+      tokenField.value = token;
+    }
+
+    async function send() {
+      const token = tokenField.value.trim();
+      if (!currentProvider || !token) {
+        log('Sign in at a provider first.');
+        return;
+      }
+
+      const url = `/api/v1/auth/external/${encodeURIComponent(currentProvider)}/login`;
+      const body = {
+        token,
+        acceptTermsAndAge: $('accept-terms').checked ? true : null,
+        acceptHealthData: $('accept-health').checked ? true : null,
+        acceptMarketing: $('accept-marketing').checked ? true : null,
+        email: $('email').value.trim() || null,
+      };
+
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Device-Id': deviceId },
+          body: JSON.stringify(body),
+        });
+        const text = await response.text();
+        let shown = text;
+        try { shown = JSON.stringify(JSON.parse(text), null, 2); } catch { /* not JSON: show as is */ }
+        log(`POST ${url} -> ${response.status} ${response.statusText}\n${shown}`);
+      } catch (error) {
+        log(`POST ${url} failed: ${error}`);
+      }
+    }
+
+    function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.async = true;
+        script.onload = resolve;
+        script.onerror = () => reject(new Error(`Could not load ${src}`));
+        document.head.appendChild(script);
+      });
+    }
+
+    async function setUpGoogle(clientId) {
+      await loadScript('https://accounts.google.com/gsi/client');
+      google.accounts.id.initialize({
+        client_id: clientId,
+        callback: response => {
+          useToken('google', response.credential);
+          send();
+        },
+      });
+      google.accounts.id.renderButton($('google-button'), { theme: 'outline', size: 'large', text: 'continue_with' });
+    }
+
+    async function setUpFacebook(appId) {
+      await loadScript('https://connect.facebook.net/en_US/sdk.js');
+      FB.init({ appId, version: facebookGraphVersion, xfbml: false, cookie: false });
+
+      const button = $('facebook-button');
+      button.hidden = false;
+      button.addEventListener('click', () => {
+        FB.login(response => {
+          if (response.authResponse) {
+            useToken('facebook', response.authResponse.accessToken);
+            send();
+          } else {
+            log('Facebook sign-in was cancelled.');
+          }
+        }, { scope: 'email' });
+      });
+    }
+
+    async function start() {
+      const response = await fetch('/api/v1/auth/external/providers');
+      const { providers } = await response.json();
+      log(`GET /api/v1/auth/external/providers -> ${response.status}\n${JSON.stringify(providers, null, 2)}`);
+
+      if (providers.length === 0) {
+        $('no-providers').hidden = false;
+        return;
+      }
+
+      for (const provider of providers) {
+        const setUp = { google: setUpGoogle, facebook: setUpFacebook }[provider.name];
+        if (setUp) {
+          setUp(provider.clientId).catch(error => log(`${provider.name}: ${error.message}`));
+        }
+      }
+    }
+
+    $('send-again').addEventListener('click', send);
+    $('clear-log').addEventListener('click', () => { logView.textContent = ''; });
+    start().catch(error => log(`Could not read the providers: ${error.message}`));
+  </script>
+</body>
+</html>
