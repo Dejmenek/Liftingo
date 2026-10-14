@@ -20,7 +20,7 @@ public class ResultExtensionsTests
     [InlineData(ErrorType.TooManyRequests, StatusCodes.Status429TooManyRequests)]
     public void ToProblem_FailureOfEachErrorType_MapsToExpectedStatusCode(ErrorType type, int expectedStatusCode)
     {
-        Application.Common.Result.Result result = Application.Common.Result.Result.Failure(
+        Result result = Result.Failure(
             new Error("Some.Code", "Some description", type));
 
         ProblemHttpResult problem = Assert.IsType<ProblemHttpResult>(result.ToProblem());
@@ -37,7 +37,7 @@ public class ResultExtensionsTests
     [InlineData(ErrorType.TooManyRequests)]
     public void ToProblem_NonValidationFailure_ExposesCodeAndDescriptionAsDetail(ErrorType type)
     {
-        Application.Common.Result.Result result = Application.Common.Result.Result.Failure(
+        Result result = Result.Failure(
             new Error("Plan.Missing", "The plan does not exist", type));
 
         ProblemHttpResult problem = Assert.IsType<ProblemHttpResult>(result.ToProblem());
@@ -57,7 +57,7 @@ public class ResultExtensionsTests
         ]);
 
         ProblemHttpResult problem = Assert.IsType<ProblemHttpResult>(
-            Application.Common.Result.Result.Failure(validationError).ToProblem());
+            Result.Failure(validationError).ToProblem());
 
         Assert.Equal(StatusCodes.Status400BadRequest, problem.StatusCode);
         Assert.Equal("Validation.General", problem.ProblemDetails.Extensions[ResultExtensions.CodeExtension]);
@@ -75,7 +75,7 @@ public class ResultExtensionsTests
         var retryAfter = new DateTimeOffset(2026, 10, 1, 12, 15, 0, TimeSpan.Zero);
 
         RetryAfterProblemResult problem = Assert.IsType<RetryAfterProblemResult>(
-            Application.Common.Result.Result.Failure(new LockedOutError(retryAfter)).ToProblem());
+            Result.Failure(new LockedOutError(retryAfter)).ToProblem());
 
         Assert.Equal(StatusCodes.Status429TooManyRequests, problem.StatusCode);
         Assert.Equal(LockedOutError.ErrorCode, problem.Problem.ProblemDetails.Extensions[ResultExtensions.CodeExtension]);
@@ -86,7 +86,7 @@ public class ResultExtensionsTests
     public async Task ExecuteAsync_LockedOutError_SendsRetryAfterHeaderInSecondsFromRequestTimeProvider()
     {
         var time = new FakeTimeProvider(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
-        IResult problem = Application.Common.Result.Result
+        IResult problem = Result
             .Failure(new LockedOutError(time.GetUtcNow().AddMinutes(15).AddMilliseconds(200)))
             .ToProblem();
         DefaultHttpContext httpContext = CreateHttpContext(time);
@@ -101,7 +101,7 @@ public class ResultExtensionsTests
     public async Task ExecuteAsync_RetryAfterInThePast_SendsZeroSeconds()
     {
         var time = new FakeTimeProvider(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
-        IResult problem = Application.Common.Result.Result
+        IResult problem = Result
             .Failure(new LockedOutError(time.GetUtcNow().AddMinutes(-1)))
             .ToProblem();
         DefaultHttpContext httpContext = CreateHttpContext(time);
@@ -117,7 +117,7 @@ public class ResultExtensionsTests
     public void ToProblem_ConsentRequiredError_Returns400WithAccountExistsAndEmailRequired(bool accountExists, bool emailRequired)
     {
         ProblemHttpResult problem = Assert.IsType<ProblemHttpResult>(
-            Application.Common.Result.Result.Failure(new ConsentRequiredError(accountExists, emailRequired)).ToProblem());
+            Result.Failure(new ConsentRequiredError(accountExists, emailRequired)).ToProblem());
 
         Assert.Equal(StatusCodes.Status400BadRequest, problem.StatusCode);
         Assert.Equal(ConsentRequiredError.ErrorCode, problem.ProblemDetails.Extensions[ResultExtensions.CodeExtension]);
@@ -129,7 +129,7 @@ public class ResultExtensionsTests
     public void ToProblem_OtherError_HasNoConsentExtensions()
     {
         ProblemHttpResult problem = Assert.IsType<ProblemHttpResult>(
-            Application.Common.Result.Result.Failure(Error.Validation("Auth.ConsentRequired", "Opis")).ToProblem());
+            Result.Failure(Error.Validation("Auth.ConsentRequired", "Opis")).ToProblem());
 
         Assert.DoesNotContain(ResultExtensions.AccountExistsExtension, problem.ProblemDetails.Extensions.Keys);
         Assert.DoesNotContain(ResultExtensions.EmailRequiredExtension, problem.ProblemDetails.Extensions.Keys);
@@ -138,7 +138,7 @@ public class ResultExtensionsTests
     [Fact]
     public void ToProblem_SuccessfulResult_Throws()
     {
-        Application.Common.Result.Result result = Application.Common.Result.Result.Success();
+        Result result = Application.Common.Result.Result.Success();
 
         Assert.Throws<InvalidOperationException>(() => result.ToProblem());
     }
