@@ -6,7 +6,6 @@ namespace Liftingo.Api.Endpoints;
 
 internal static class V1Endpoints
 {
-    // The concrete path prefix of this version, for things that need it outside routing (cookie paths).
     public const string PathPrefix = "/api/v1";
 
     public static readonly ApiVersion Version = new(1, 0);

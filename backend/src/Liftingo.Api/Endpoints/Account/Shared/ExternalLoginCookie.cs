@@ -1,10 +1,8 @@
-using System.Globalization;
-using System.Security.Claims;
-
 using Liftingo.Api.Security;
 using Liftingo.Application.Common.Security;
-
 using Microsoft.AspNetCore.Authentication;
+using System.Globalization;
+using System.Security.Claims;
 
 namespace Liftingo.Api.Endpoints.Account.Shared;
 
@@ -14,17 +12,13 @@ namespace Liftingo.Api.Endpoints.Account.Shared;
 /// </summary>
 internal static class ExternalLoginCookie
 {
-    /// <summary>The key of the scheme name in the properties that travel through the provider flow.</summary>
     public const string ProviderItem = "liftingo.provider";
 
-    /// <summary>The key of the device id in the properties that travel through the provider flow.</summary>
     public const string DeviceIdItem = "liftingo.deviceId";
 
-    /// <returns>The pending sign-in, or <c>null</c> when the cookie is missing, expired, tampered with or incomplete.</returns>
     public static async Task<ExternalIdentity?> ReadAsync(HttpContext http)
     {
         ArgumentNullException.ThrowIfNull(http);
-
         AuthenticateResult result = await http.AuthenticateAsync(AuthenticationSchemes.External);
 
         if (!result.Succeeded || result.Principal is null || result.Properties is null)
@@ -53,8 +47,6 @@ internal static class ExternalLoginCookie
             result.Principal.FindFirstValue(ClaimTypes.Name),
             deviceId);
     }
-
-    /// <summary>Deletes the cookie, and with it everything the provider told us.</summary>
     public static Task ClearAsync(HttpContext http)
     {
         ArgumentNullException.ThrowIfNull(http);

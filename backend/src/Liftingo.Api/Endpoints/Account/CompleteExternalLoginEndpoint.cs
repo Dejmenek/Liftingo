@@ -31,7 +31,6 @@ internal sealed class CompleteExternalLoginEndpoint : IEndpoint
     {
         ExternalIdentity? external = await ExternalLoginCookie.ReadAsync(http);
 
-        // The SPA sends X-Device-Id on this call and it is the freshest; the id from the start of the flow is the fallback.
         var command = new CompleteExternalLoginCommand(
             request.AcceptTermsAndAge,
             request.AcceptHealthData,
@@ -42,7 +41,6 @@ internal sealed class CompleteExternalLoginEndpoint : IEndpoint
 
         Result<CompleteExternalLoginResponse> result = await handler.HandleAsync(command, ct);
 
-        // A refusal keeps the external cookie, so the user can correct the request and try again.
         if (result.IsFailure)
         {
             return result.ToProblem();

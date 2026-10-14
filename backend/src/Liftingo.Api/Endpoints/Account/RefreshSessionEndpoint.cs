@@ -6,7 +6,6 @@ using Liftingo.Application.Features.Account.RefreshSession;
 
 namespace Liftingo.Api.Endpoints.Account;
 
-// No request body: the refresh token travels in the HttpOnly cookie.
 internal sealed class RefreshSessionEndpoint : IEndpoint
 {
     public static void Map(RouteGroupBuilder group) =>
@@ -28,7 +27,6 @@ internal sealed class RefreshSessionEndpoint : IEndpoint
 
         if (result.IsFailure)
         {
-            // Whatever went wrong, the cookie is of no further use.
             refreshCookie.Delete(http.Response);
 
             return result.ToProblem();

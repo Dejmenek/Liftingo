@@ -4,7 +4,6 @@ public static class RouteConsts
 {
     public static class Auth
     {
-        // Prefix of the routes that receive the refresh-token cookie; it becomes the cookie path.
         public const string SessionPrefix = "/auth/session";
 
         public const string Register = "/auth/register";

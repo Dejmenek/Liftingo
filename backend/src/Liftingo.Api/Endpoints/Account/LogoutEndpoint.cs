@@ -4,8 +4,6 @@ using Liftingo.Application.Features.Account.Logout;
 
 namespace Liftingo.Api.Endpoints.Account;
 
-// No request body and no response body: the refresh token travels in the HttpOnly cookie, so a user whose
-// access token has expired can still sign out.
 internal sealed class LogoutEndpoint : IEndpoint
 {
     public static void Map(RouteGroupBuilder group) =>

@@ -6,7 +6,6 @@ using Liftingo.Application.Features.Account.ResetPassword;
 
 namespace Liftingo.Api.Endpoints.Account;
 
-// No response body and no session: the user signs in with the new password.
 internal sealed class ResetPasswordEndpoint : IEndpoint
 {
     public static void Map(RouteGroupBuilder group) =>
@@ -38,7 +37,6 @@ internal sealed class ResetPasswordEndpoint : IEndpoint
             return result.ToProblem();
         }
 
-        // Every session ended, the caller's included, so its cookie goes too.
         refreshCookie.Delete(http.Response);
 
         return Results.NoContent();
