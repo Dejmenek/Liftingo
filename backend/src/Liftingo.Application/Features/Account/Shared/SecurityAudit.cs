@@ -1,9 +1,7 @@
-using System.Diagnostics.CodeAnalysis;
-
 using Liftingo.Application.Common.Security;
 using Liftingo.Domain.Account;
-
 using Microsoft.Extensions.Logging;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Liftingo.Application.Features.Account.Shared;
 

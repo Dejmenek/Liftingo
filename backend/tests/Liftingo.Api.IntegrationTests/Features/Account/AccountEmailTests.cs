@@ -1,6 +1,3 @@
-using System.Globalization;
-using System.Net;
-
 using Liftingo.Api.Endpoints;
 using Liftingo.Api.Endpoints.Account.Shared;
 using Liftingo.Api.IntegrationTests.Infrastructure;
@@ -8,9 +5,9 @@ using Liftingo.Api.IntegrationTests.Infrastructure.Fakers;
 using Liftingo.Application.Common.Security;
 using Liftingo.Domain.Account;
 using Liftingo.Infrastructure.Email;
-
 using Microsoft.Extensions.DependencyInjection;
-
+using System.Globalization;
+using System.Net;
 using ApplicationDbContext = Liftingo.Infrastructure.Persistence.ApplicationDbContext;
 
 namespace Liftingo.Api.IntegrationTests.Features.Account;

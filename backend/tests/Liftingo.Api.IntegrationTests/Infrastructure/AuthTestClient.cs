@@ -1,12 +1,11 @@
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
-using System.Text.RegularExpressions;
-
 using Liftingo.Api.Endpoints;
 using Liftingo.Api.Endpoints.Account.Shared;
 using Liftingo.Api.IntegrationTests.Infrastructure.Fakers;
 using Liftingo.Application.Features.Account.Shared;
 using Liftingo.Infrastructure.Email;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text.RegularExpressions;
 
 namespace Liftingo.Api.IntegrationTests.Infrastructure;
 

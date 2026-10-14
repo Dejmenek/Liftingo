@@ -1,10 +1,7 @@
-using System.Diagnostics.CodeAnalysis;
-
 using Google.Apis.Auth;
-
 using Liftingo.Application.Common.Security;
-
 using Microsoft.Extensions.Logging;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Liftingo.Infrastructure.Identity.ExternalProviders;
 

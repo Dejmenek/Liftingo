@@ -1,10 +1,8 @@
-using System.Security.Cryptography;
-
 using Liftingo.Application.Common.Security;
 using Liftingo.Domain.Account;
 using Liftingo.Infrastructure.Audit;
-
 using Microsoft.AspNetCore.DataProtection;
+using System.Security.Cryptography;
 
 namespace Liftingo.Api.UnitTests.Infrastructure.Audit;
 

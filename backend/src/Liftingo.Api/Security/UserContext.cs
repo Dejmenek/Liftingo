@@ -1,6 +1,5 @@
-using System.Security.Claims;
-
 using Liftingo.Application.Common;
+using System.Security.Claims;
 
 namespace Liftingo.Api.Security;
 

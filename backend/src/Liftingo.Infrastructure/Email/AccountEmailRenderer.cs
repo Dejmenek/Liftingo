@@ -1,11 +1,9 @@
-using System.Globalization;
-using System.Net;
-
 using Liftingo.Application.Common.Configuration;
 using Liftingo.Application.Common.Email;
 using Liftingo.Application.Features.Account.Shared.Emails;
-
 using Microsoft.Extensions.Options;
+using System.Globalization;
+using System.Net;
 
 namespace Liftingo.Infrastructure.Email;
 

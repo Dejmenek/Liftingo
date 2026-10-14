@@ -1,12 +1,9 @@
-using System.Security.Cryptography;
-using System.Text;
-
 using Liftingo.Application.Common.Security;
 using Liftingo.Application.Features.Account.Shared;
-
 using Microsoft.Extensions.Options;
-
 using StackExchange.Redis;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Liftingo.Infrastructure.Sessions;
 

@@ -1,13 +1,10 @@
-using System.Buffers.Text;
-
 using Liftingo.Application.Common.Security;
 using Liftingo.Application.Features.Account.Shared;
 using Liftingo.Infrastructure.Sessions;
-
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
-
 using StackExchange.Redis;
+using System.Buffers.Text;
 
 namespace Liftingo.Api.IntegrationTests.Infrastructure;
 

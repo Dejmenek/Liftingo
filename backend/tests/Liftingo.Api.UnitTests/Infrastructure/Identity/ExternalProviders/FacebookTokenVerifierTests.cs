@@ -1,10 +1,8 @@
-using System.Net;
-using System.Text;
-
 using Liftingo.Application.Common.Security;
 using Liftingo.Infrastructure.Identity.ExternalProviders;
-
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Net;
+using System.Text;
 
 namespace Liftingo.Api.UnitTests.Infrastructure.Identity.ExternalProviders;
 

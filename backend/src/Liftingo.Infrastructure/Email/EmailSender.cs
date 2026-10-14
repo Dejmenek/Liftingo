@@ -1,8 +1,6 @@
-using System.Diagnostics.CodeAnalysis;
-
 using Liftingo.Application.Common.Email;
-
 using Microsoft.Extensions.Logging;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Liftingo.Infrastructure.Email;
 

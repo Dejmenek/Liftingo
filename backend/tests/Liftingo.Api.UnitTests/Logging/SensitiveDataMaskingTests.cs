@@ -1,10 +1,8 @@
-using System.Globalization;
-
 using Liftingo.Api.Extensions;
-
 using Serilog;
 using Serilog.Core;
 using Serilog.Events;
+using System.Globalization;
 
 namespace Liftingo.Api.UnitTests.Logging;
 
