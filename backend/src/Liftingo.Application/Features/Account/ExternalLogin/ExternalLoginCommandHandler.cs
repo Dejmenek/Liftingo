@@ -64,7 +64,7 @@ public sealed class ExternalLoginCommandHandler(
             // Nobody is identified, so the audit record carries no IP and no device.
             await audit.WriteAsync(null, SecurityEventType.ExternalLogin, SecurityEventOutcome.Failed, client, ct);
 
-            return Result.Failure<ExternalLoginResponse>(ExternalLoginErrors.Failed);
+            return Result.Failure<ExternalLoginResponse>(ExternalLoginErrors.Failed(provider.LoginProvider));
         }
 
         AccountSummary? linked = await identity.FindByLoginAsync(external.Provider, external.ProviderKey, ct);
