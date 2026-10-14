@@ -215,6 +215,7 @@ public sealed class ExternalLoginCommandHandler(
 
         IssuedSession session = await sessions.IssueAsync(account.Id, client, ct);
         await audit.WriteAsync(account.Id, SecurityEventType.ProviderLinked, SecurityEventOutcome.Succeeded, client, ct);
+        await audit.WriteAsync(account.Id, SecurityEventType.ExternalLogin, SecurityEventOutcome.Succeeded, client, ct);
 
         await SendNewDeviceEmailAsync(isNewDevice, account, client, ct);
 
@@ -256,8 +257,10 @@ public sealed class ExternalLoginCommandHandler(
             return Result.Failure<ExternalLoginResponse>(conflict);
         }
 
-        // SQL is committed; now Redis (session), then the e-mail.
+        // SQL is committed; now Redis (session), the audit record, then the e-mail. Signing up through a provider
+        // is still a provider sign-in, so it is audited like one.
         IssuedSession session = await sessions.IssueAsync(userId, command.Client, ct);
+        await audit.WriteAsync(userId, SecurityEventType.ExternalLogin, SecurityEventOutcome.Succeeded, command.Client, ct);
 
         // A typed e-mail gets the same combined welcome and verification e-mail as registration. A provider
         // e-mail needs no verification, so it gets the welcome alone.
