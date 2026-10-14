@@ -1,6 +1,8 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <!-- Lets a PackageVersion below override a vulnerable version that a dependency pulls in. -->
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
 
   <ItemGroup>
@@ -29,6 +31,11 @@
     <PackageVersion Include="Asp.Versioning.OpenApi" Version="10.2.3" />
     <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
     <PackageVersion Include="Serilog.Enrichers.Sensitive" Version="2.1.0" />
+
+    <!-- Transitive pins. Microsoft.Data.SqlClient 6.1.7 (through EF Core SqlServer) still depends on
+         System.Security.Cryptography.Pkcs 9.0.11, which has known vulnerabilities fixed in 10.0.13.
+         Remove the pin once SqlClient depends on a fixed version. -->
+    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
 
     <!-- Static analysis -->
     <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.33.0.1635" />
