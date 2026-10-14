@@ -42,6 +42,8 @@ try
     {
         app.MapOpenApi().WithDocumentPerVersion();
 
+        app.MapDevPages();
+
         await app.ApplyMigrationsAsync();
     }
 

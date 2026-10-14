@@ -20,6 +20,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="DevPages\provider-sign-in.html" LogicalName="DevPages.provider-sign-in.html" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="Liftingo.Api.UnitTests" />
     <InternalsVisibleTo Include="Liftingo.Api.IntegrationTests" />
   </ItemGroup>

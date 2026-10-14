@@ -20,4 +20,10 @@ public static class RouteConsts
         public const string ExternalLogin = "/auth/external/{provider}/login";
         public const string ConfirmProviderLink = "/auth/external/confirm-link";
     }
+
+    // Development-only pages, mapped outside the versioned API.
+    public static class Dev
+    {
+        public const string ProviderSignIn = "/dev/provider-sign-in";
+    }
 }
