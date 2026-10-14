@@ -81,7 +81,7 @@ public sealed class RedisSessionStore(
             }
 
             return (sessionId, refreshToken, ttl);
-        });
+        }, ct);
     }
 
     public async Task<RotationResult> RotateAsync(byte[] tokenHash, CancellationToken ct)
@@ -120,7 +120,7 @@ public sealed class RedisSessionStore(
                 default:
                     return new RotationResult.Invalid();
             }
-        });
+        }, ct);
     }
 
     public async Task RevokeAsync(Guid sessionId, CancellationToken ct)
@@ -135,7 +135,7 @@ public sealed class RedisSessionStore(
                 [Prefix, sessionId.ToString()]);
 
             return true;
-        });
+        }, ct);
     }
 
     public async Task<SessionInfo?> RevokeByTokenAsync(byte[] tokenHash, CancellationToken ct)
@@ -156,7 +156,7 @@ public sealed class RedisSessionStore(
             return result is { Length: > 0 }
                 ? ToSessionInfo(result[3], result[0], result[1], result[2])
                 : null;
-        });
+        }, ct);
     }
 
     public async Task<int> RevokeAllAsync(Guid userId, CancellationToken ct)
@@ -171,7 +171,7 @@ public sealed class RedisSessionStore(
                 [Prefix]);
 
             return (int)result;
-        });
+        }, ct);
     }
 
     public async Task<bool> IsActiveAsync(Guid sessionId, CancellationToken ct)
@@ -181,7 +181,7 @@ public sealed class RedisSessionStore(
             ct.ThrowIfCancellationRequested();
 
             return await redis.GetDatabase().KeyExistsAsync(SessionKey(sessionId));
-        });
+        }, ct);
     }
 
     private static SessionInfo ToSessionInfo(RedisResult sessionId, RedisResult userId, RedisResult deviceId, RedisResult deviceType) =>
