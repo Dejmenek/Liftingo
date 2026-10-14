@@ -43,8 +43,6 @@ public sealed class ExternalLoginCommandHandler(
 
     public async Task<Result<ExternalLoginResponse>> HandleAsync(ExternalLoginCommand command, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(command);
-
         ValidationResult validation = await validator.ValidateAsync(command, ct);
 
         if (!validation.IsValid)

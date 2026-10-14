@@ -31,8 +31,6 @@ public sealed class RedisSessionStore(
         SessionDevice device,
         CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(device);
-
         return await RedisCalls.GuardAsync(async () =>
         {
             ct.ThrowIfCancellationRequested();
@@ -83,8 +81,6 @@ public sealed class RedisSessionStore(
 
     public async Task<RotationResult> RotateAsync(byte[] tokenHash, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(tokenHash);
-
         return await RedisCalls.GuardAsync<RotationResult>(async () =>
         {
             ct.ThrowIfCancellationRequested();
@@ -137,8 +133,6 @@ public sealed class RedisSessionStore(
 
     public async Task<SessionInfo?> RevokeByTokenAsync(byte[] tokenHash, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(tokenHash);
-
         return await RedisCalls.GuardAsync<SessionInfo?>(async () =>
         {
             ct.ThrowIfCancellationRequested();

@@ -13,8 +13,6 @@ public sealed class GetCurrentAccountQueryHandler(IUserContext userContext, IIde
 
     public async Task<Result<GetCurrentAccountResponse>> HandleAsync(GetCurrentAccountQuery query, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(query);
-
         AccountSummary? summary = await identity.GetSummaryAsync(userContext.UserId, ct);
 
         return summary is null

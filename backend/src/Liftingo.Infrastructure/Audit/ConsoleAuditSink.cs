@@ -20,8 +20,6 @@ internal sealed class ConsoleAuditSink : IAuditSink, IDisposable
 
     public Task WriteAsync(AuditRecord record, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(record);
-
         _logger.Information(
             MessageTemplate,
             record.EventId,

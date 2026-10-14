@@ -6,8 +6,6 @@ public sealed class AppOptionsValidator : IValidateOptions<AppOptions>
 {
     public ValidateOptionsResult Validate(string? name, AppOptions options)
     {
-        ArgumentNullException.ThrowIfNull(options);
-
         if (options.FrontendBaseUrl is not { IsAbsoluteUri: true } uri || uri.Scheme != Uri.UriSchemeHttps)
         {
             return ValidateOptionsResult.Fail(

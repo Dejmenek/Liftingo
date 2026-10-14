@@ -10,8 +10,6 @@ public sealed partial class DisabledEmailTransport(ILogger<DisabledEmailTranspor
 {
     public Task SendAsync(EmailMessage message, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(message);
-
         LogDropped(message.TemplateName, message.UserId);
 
         return Task.CompletedTask;

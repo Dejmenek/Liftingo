@@ -21,8 +21,6 @@ public sealed class LiftingoUserStore : UserStore<ApplicationUser, IdentityRole<
 
     public override async Task<IdentityResult> UpdateAsync(ApplicationUser user, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(user);
-
         // UserManager calls UpdateAsync after most changes (AddLoginAsync, ...). The base implementation calls
         // DbContext.Update, which would turn a user that was staged earlier in the same unit of work from Added
         // into Modified, and the INSERT would become an UPDATE of a row that does not exist.

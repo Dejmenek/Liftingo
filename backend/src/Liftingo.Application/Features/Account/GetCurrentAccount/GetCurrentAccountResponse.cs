@@ -12,8 +12,6 @@ public sealed record GetCurrentAccountResponse(
 {
     public static GetCurrentAccountResponse From(AccountSummary summary)
     {
-        ArgumentNullException.ThrowIfNull(summary);
-
         return new GetCurrentAccountResponse(summary.Id, summary.Email, summary.EmailVerified, summary.HasPassword, summary.Providers);
     }
 }

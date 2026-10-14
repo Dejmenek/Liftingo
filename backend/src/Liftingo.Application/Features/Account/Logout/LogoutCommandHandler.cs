@@ -14,8 +14,6 @@ public sealed class LogoutCommandHandler(ISessionStore sessionStore, SecurityAud
 {
     public async Task<Result> HandleAsync(LogoutCommand command, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(command);
-
         byte[]? tokenHash = command.RefreshToken is { } token ? OpaqueToken.Hash(token) : null;
 
         // Idempotent: a missing, unknown or already revoked token is not an error and writes no audit record.

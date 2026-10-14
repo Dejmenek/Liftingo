@@ -38,8 +38,6 @@ public static class InfrastructureExtensions
         IConfiguration configuration,
         IHostEnvironment environment)
     {
-        ArgumentNullException.ThrowIfNull(environment);
-
         services.TryAddSingleton(TimeProvider.System);
 
         services.AddPersistence(configuration);

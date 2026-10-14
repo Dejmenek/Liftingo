@@ -27,8 +27,6 @@ public sealed class LoginCommandHandler(
 
     public async Task<Result<LoginResponse>> HandleAsync(LoginCommand command, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(command);
-
         ValidationResult validation = await validator.ValidateAsync(command, ct);
 
         if (!validation.IsValid)

@@ -26,8 +26,6 @@ public sealed class VerifyEmailCommandHandler(
 
     public async Task<Result<VerifyEmailResponse>> HandleAsync(VerifyEmailCommand command, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(command);
-
         ValidationResult validation = await validator.ValidateAsync(command, ct);
 
         if (!validation.IsValid)

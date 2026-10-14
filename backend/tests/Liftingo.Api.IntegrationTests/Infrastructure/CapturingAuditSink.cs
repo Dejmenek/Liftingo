@@ -48,9 +48,6 @@ public sealed class CapturingAuditSink : IAuditSink
     /// <returns><c>null</c> when the record has no key (an event without a user) or the key has been deleted.</returns>
     public static async Task<DecryptedAudit?> DecryptAsync(AuditRecord record, IServiceProvider services)
     {
-        ArgumentNullException.ThrowIfNull(record);
-        ArgumentNullException.ThrowIfNull(services);
-
         if (record.KeyId == Guid.Empty)
         {
             return null;

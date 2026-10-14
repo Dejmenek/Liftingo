@@ -37,8 +37,6 @@ public sealed class ResetPasswordCommandHandler(
 
     public async Task<Result> HandleAsync(ResetPasswordCommand command, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(command);
-
         ValidationResult validation = await validator.ValidateAsync(command, ct);
 
         if (!validation.IsValid)

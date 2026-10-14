@@ -11,8 +11,6 @@ internal sealed class EncryptingSecurityAuditLog(IAuditKeyProvider keys, IAuditS
 {
     public async Task WriteAsync(SecurityAuditEvent auditEvent, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(auditEvent);
-
         AuditRecord record;
 
         if (auditEvent.UserId is { } userId)

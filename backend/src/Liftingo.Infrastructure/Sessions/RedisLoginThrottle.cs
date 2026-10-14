@@ -31,8 +31,6 @@ public sealed class RedisLoginThrottle(
 
     public async Task<DateTimeOffset?> GetLockoutEndAsync(string email, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(email);
-
         return await RedisCalls.GuardAsync<DateTimeOffset?>(async () =>
         {
             ct.ThrowIfCancellationRequested();
@@ -52,8 +50,6 @@ public sealed class RedisLoginThrottle(
 
     public async Task<PasswordCheckResult.LockoutTriggered?> RegisterFailureAsync(string email, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(email);
-
         LoginLockoutOptions lockout = lockoutOptions.Value;
 
         return await RedisCalls.GuardAsync<PasswordCheckResult.LockoutTriggered?>(async () =>

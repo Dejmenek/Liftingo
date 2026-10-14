@@ -10,8 +10,6 @@ public static class ValidationResultExtensions
     /// </summary>
     public static ValidationError ToValidationError(this ValidationResult validationResult)
     {
-        ArgumentNullException.ThrowIfNull(validationResult);
-
         return ValidationError.FromErrors(
         [
             .. validationResult.Errors.Select(failure => Error.Validation(failure.ErrorCode, failure.ErrorMessage)),

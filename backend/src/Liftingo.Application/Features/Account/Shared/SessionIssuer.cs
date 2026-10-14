@@ -21,8 +21,6 @@ public sealed class SessionIssuer(
     /// <returns><c>true</c> when the device is new and the user should get the new-device e-mail.</returns>
     public async Task<bool> StageDeviceAsync(Guid userId, ClientInfo client, SignInKind kind, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(client);
-
         DateTimeOffset now = timeProvider.GetUtcNow();
 
         if (kind == SignInKind.Registration)
@@ -53,8 +51,6 @@ public sealed class SessionIssuer(
     /// </summary>
     public async Task<IssuedSession> IssueAsync(Guid userId, ClientInfo client, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(client);
-
         AccountSummary summary = await identity.GetSummaryAsync(userId, ct)
             ?? throw new InvalidOperationException($"Account {userId} does not exist after it was committed.");
 

@@ -21,8 +21,6 @@ public static class AccountValidationRules
     /// </summary>
     public static IRuleBuilderOptions<T, string> MustBeValidEmail<T>(this IRuleBuilder<T, string> rule)
     {
-        ArgumentNullException.ThrowIfNull(rule);
-
         return rule
             .Must(email => !string.IsNullOrWhiteSpace(email))
             .WithErrorCode("Validation.EmailRequired")
@@ -41,8 +39,6 @@ public static class AccountValidationRules
     /// </summary>
     public static IRuleBuilderOptions<T, string> MustBeAcceptablePassword<T>(this IRuleBuilder<T, string> rule)
     {
-        ArgumentNullException.ThrowIfNull(rule);
-
         return rule
             .Must(password => !string.IsNullOrEmpty(password))
             .WithErrorCode("Validation.PasswordRequired")
@@ -54,8 +50,6 @@ public static class AccountValidationRules
 
     public static IRuleBuilderOptions<T, bool> MustAcceptTermsAndAge<T>(this IRuleBuilder<T, bool> rule)
     {
-        ArgumentNullException.ThrowIfNull(rule);
-
         return rule
             .Must(accepted => accepted)
             .WithErrorCode("Validation.TermsRequired")
@@ -64,8 +58,6 @@ public static class AccountValidationRules
 
     public static IRuleBuilderOptions<T, bool> MustAcceptHealthData<T>(this IRuleBuilder<T, bool> rule)
     {
-        ArgumentNullException.ThrowIfNull(rule);
-
         return rule
             .Must(accepted => accepted)
             .WithErrorCode("Validation.HealthDataRequired")

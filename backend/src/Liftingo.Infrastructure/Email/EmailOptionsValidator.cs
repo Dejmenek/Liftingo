@@ -8,8 +8,6 @@ public sealed class EmailOptionsValidator : IValidateOptions<EmailOptions>
 
     public ValidateOptionsResult Validate(string? name, EmailOptions options)
     {
-        ArgumentNullException.ThrowIfNull(options);
-
         if (string.IsNullOrWhiteSpace(options.DisplayTimeZone))
         {
             return ValidateOptionsResult.Fail($"'{DisplayTimeZonePath}' must be configured.");

@@ -18,8 +18,6 @@ public sealed class LogoutAllDevicesCommandHandler(
 {
     public async Task<Result> HandleAsync(LogoutAllDevicesCommand command, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(command);
-
         Guid userId = userContext.UserId;
 
         // Forgetting the devices is the only SQL write here, so it needs no transaction. The next sign-in from any

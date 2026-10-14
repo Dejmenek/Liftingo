@@ -15,11 +15,8 @@ public static class OpaqueToken
         return (Base64Url.EncodeToString(bytes), SHA256.HashData(bytes));
     }
 
-    /// <returns>The SHA-256 of the token's bytes, or <c>null</c> when <paramref name="token"/> is not valid Base64Url.</returns>
     public static byte[]? Hash(string token)
     {
-        ArgumentNullException.ThrowIfNull(token);
-
         // A token is Base64Url of at most 32 bytes' worth of text; the buffer is always large enough.
         byte[] buffer = new byte[Base64Url.GetMaxDecodedLength(token.Length)];
 
