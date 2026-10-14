@@ -2,7 +2,6 @@ using Liftingo.Application.Common.Security;
 
 namespace Liftingo.Api.Endpoints.Account.Shared;
 
-/// <summary>The <c>account</c> object of <see cref="AuthSessionResponse"/>.</summary>
 public sealed record AccountResponse(
     Guid Id,
     string Email,
@@ -13,7 +12,6 @@ public sealed record AccountResponse(
     public static AccountResponse From(AccountSummary summary)
     {
         ArgumentNullException.ThrowIfNull(summary);
-
         return new AccountResponse(summary.Id, summary.Email, summary.EmailVerified, summary.HasPassword, summary.Providers);
     }
 }

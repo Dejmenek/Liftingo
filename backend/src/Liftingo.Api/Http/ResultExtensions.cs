@@ -1,8 +1,6 @@
-using System.Globalization;
-
 using Liftingo.Application.Common.Result;
-
 using Microsoft.AspNetCore.Http.HttpResults;
+using System.Globalization;
 
 namespace Liftingo.Api.Http;
 
@@ -18,7 +16,6 @@ public static class ResultExtensions
     public static IResult ToProblem(this Result result)
     {
         ArgumentNullException.ThrowIfNull(result);
-
         if (result.IsSuccess)
         {
             throw new InvalidOperationException("Cannot map a successful result to a problem response.");

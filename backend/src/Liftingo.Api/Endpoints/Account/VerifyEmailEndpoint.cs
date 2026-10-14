@@ -5,7 +5,6 @@ using Liftingo.Application.Features.Account.VerifyEmail;
 
 namespace Liftingo.Api.Endpoints.Account;
 
-// Anonymous on purpose: the token identifies the account, so a signed-in different user is ignored.
 internal sealed class VerifyEmailEndpoint : IEndpoint
 {
     public static void Map(RouteGroupBuilder group) =>

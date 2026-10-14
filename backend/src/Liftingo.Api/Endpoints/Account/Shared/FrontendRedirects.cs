@@ -1,12 +1,9 @@
-using System.Globalization;
-
 using Liftingo.Application.Common.Configuration;
-
 using Microsoft.Extensions.Options;
+using System.Globalization;
 
 namespace Liftingo.Api.Endpoints.Account.Shared;
 
-/// <summary>The redirects the external-login callback answers with.</summary>
 internal sealed class FrontendRedirects(IOptions<AppOptions> appOptions)
 {
     public IResult Callback() => To("auth/callback");
@@ -22,7 +19,6 @@ internal sealed class FrontendRedirects(IOptions<AppOptions> appOptions)
 
     private IResult To(string pathAndQuery)
     {
-        // FrontendBaseUrl is validated at startup (absolute https URL).
         string baseUrl = appOptions.Value.FrontendBaseUrl!.AbsoluteUri.TrimEnd('/');
 
         return Results.Redirect($"{baseUrl}/{pathAndQuery}");

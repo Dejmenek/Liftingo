@@ -1,7 +1,6 @@
-using System.Globalization;
-
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Net.Http.Headers;
+using System.Globalization;
 
 namespace Liftingo.Api.Http;
 
@@ -20,7 +19,6 @@ public sealed class RetryAfterProblemResult(ProblemHttpResult problem, DateTimeO
     public Task ExecuteAsync(HttpContext httpContext)
     {
         ArgumentNullException.ThrowIfNull(httpContext);
-
         TimeProvider timeProvider = httpContext.RequestServices?.GetService(typeof(TimeProvider)) as TimeProvider
             ?? TimeProvider.System;
 

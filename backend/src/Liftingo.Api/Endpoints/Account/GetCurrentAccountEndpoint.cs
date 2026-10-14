@@ -16,8 +16,6 @@ internal sealed class GetCurrentAccountEndpoint : IEndpoint
     {
         Result<GetCurrentAccountResponse> result = await handler.HandleAsync(new GetCurrentAccountQuery(), ct);
 
-        // The only failure is an account deleted after its token was issued: the same bare 401 the
-        // authentication middleware sends for any other unusable token.
         return result.IsSuccess ? Results.Ok(result.Value) : Results.Unauthorized();
     }
 }

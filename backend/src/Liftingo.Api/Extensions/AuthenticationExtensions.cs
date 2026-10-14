@@ -36,21 +36,17 @@ internal static class AuthenticationExtensions
             .Configure<IOptions<ExternalLoginOptions>, TimeProvider>((cookie, externalLogin, timeProvider) =>
             {
                 cookie.ExpireTimeSpan = externalLogin.Value.PendingTimeout;
-
-                // The 10-minute pending window follows the injected clock, like token lifetimes do.
                 cookie.TimeProvider = timeProvider;
             });
 
         services.AddAuthorization();
 
-        // The refresh cookie is sent only to the session endpoints, so its path needs the API version prefix.
         services.AddOptions<RefreshCookieOptions>()
             .Configure(options => options.Path = V1Endpoints.PathPrefix + RouteConsts.Auth.SessionPrefix);
 
         services.AddSingleton<RefreshTokenCookie>();
         services.AddSingleton<FrontendRedirects>();
 
-        // The signed-in user comes from the access token on the current request.
         services.AddHttpContextAccessor();
         services.AddScoped<IUserContext, UserContext>();
 

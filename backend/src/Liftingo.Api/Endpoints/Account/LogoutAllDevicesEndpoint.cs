@@ -4,7 +4,6 @@ using Liftingo.Application.Features.Account.LogoutAllDevices;
 
 namespace Liftingo.Api.Endpoints.Account;
 
-// No request body and no response body. The signed-in user comes from the bearer token.
 internal sealed class LogoutAllDevicesEndpoint : IEndpoint
 {
     public static void Map(RouteGroupBuilder group) =>

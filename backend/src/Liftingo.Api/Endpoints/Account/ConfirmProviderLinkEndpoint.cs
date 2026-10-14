@@ -6,7 +6,6 @@ using Liftingo.Application.Features.Account.ConfirmProviderLink;
 
 namespace Liftingo.Api.Endpoints.Account;
 
-// Anonymous on purpose: the token identifies the account.
 internal sealed class ConfirmProviderLinkEndpoint : IEndpoint
 {
     public static void Map(RouteGroupBuilder group) =>
