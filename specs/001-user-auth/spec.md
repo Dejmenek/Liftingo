@@ -34,6 +34,12 @@
 - Q: When an action both saves data and sends an e-mail, must the e-mail go out only after the data is saved, and can a lost e-mail just be requested again? → A: Yes. E-mails are sent after the save succeeds, in the same request, best-effort. A failed or lost e-mail is logged without personal data and can be requested again. There is no outbox.
 - Q: In which time zone should e-mails show times, such as the sign-in time in the new-device e-mail? → A: Polish time (`Europe/Warsaw`, daylight saving applied), set in configuration. The app refuses to start if the configured zone is unknown on the host; there is no fallback to UTC.
 
+### Session 2026-10-14
+
+- Q: Is Twitter (X) still in scope? → A: No, it is deferred to a later feature. X has no identity token, so the client cannot hand the API a credential the way it does for Google and Facebook. This feature supports Google and Facebook. The PRD and the constitution were amended to match. This replaces the provider answers of 2026-10-12.
+- Q: How does a provider sign-in reach the API? → A: The client signs in at the provider itself and sends the provider's credential (a Google identity token, a Facebook access token) to the API, which checks it with the provider and signs the user in. The API keeps no state between the provider and the client: no redirects, no temporary cookie.
+- Q: When are the consents for a provider sign-up given? → A: Either before the provider sign-in (the registration page asks for them first) or after it, when the API answers that consents are required (the user started from the login page and has no account yet). In the second case the client sends the same provider credential again together with the consents. Nothing is stored until the consents arrive.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Register with e-mail and password (Priority: P1)
@@ -113,7 +119,7 @@ After registering, the user gets an e-mail with a single-use verification link t
 
 ### User Story 5 - Register or log in with an external provider (Priority: P2)
 
-A visitor or returning user chooses to sign in with Google, Facebook or Twitter (X). On first use, a short interstitial asks for the same consents as the e-mail registration form, and the account is not created until both required consents are given. On later visits the user is signed straight in.
+A visitor or returning user chooses to sign in with Google or Facebook. A new user gives the same consents as on the e-mail registration form, either before going to the provider (registration page) or right after it (login page, when the API says consents are required), and the account is not created until both required consents are given. On later visits the user is signed straight in.
 
 **Why this priority**: It lowers the barrier to sign-up, but e-mail registration already covers the core need, so the product works without it.
 
@@ -121,15 +127,15 @@ A visitor or returning user chooses to sign in with Google, Facebook or Twitter 
 
 **Acceptance Scenarios**:
 
-1. **Given** a visitor with no account, **When** they finish sign-in with a supported provider for the first time, **Then** they see the consent interstitial, and no account is created until the two required consents are accepted.
-2. **Given** a visitor at the consent interstitial, **When** they decline or leave, **Then** no account and no personal data from the provider are kept.
-3. **Given** a user who has already registered through a provider, **When** they sign in with that provider again, **Then** they are signed in to their existing account without the interstitial.
+1. **Given** a visitor with no account, **When** they finish sign-in with a supported provider without having given the consents, **Then** they are asked for them, and no account is created until the two required consents are accepted.
+2. **Given** a visitor who is asked for the consents after a provider sign-in, **When** they decline or leave, **Then** no account and no personal data from the provider are kept.
+3. **Given** a user who has already registered through a provider, **When** they sign in with that provider again, **Then** they are signed in to their existing account without being asked for consents. Consents sent along anyway are ignored.
 4. **Given** a supported provider that returns an e-mail address, **When** an account is created from it, **Then** the account's e-mail is treated as verified and no verification e-mail is needed.
 5. **Given** a provider sign-in whose e-mail matches an existing e-mail/password account, **When** the user completes it, **Then** the provider is linked to that existing account and the user is signed in to it without a password prompt.
 6. **Given** a provider that returns no e-mail address, **When** a new account would be created, **Then** the user is asked for an e-mail address, which then goes through normal verification.
 7. **Given** a provider that returns no e-mail address, **When** the user types in an address that already belongs to an account, **Then** no account is created, a link-confirmation e-mail is sent to that address, the user is told to check their inbox, and the provider is linked to the existing account only after the link is opened.
-8. **Given** a user who cancels at the provider, or a provider that returns an error, **When** they come back to Liftingo, **Then** they are on the login screen with a generic message, and nothing from the provider is kept.
-9. **Given** a visitor who leaves the consent interstitial open for more than 10 minutes, **When** they try to continue, **Then** they are told to start the provider sign-in again, and no account was created.
+8. **Given** a provider credential that is invalid, expired, or was issued for another application, **When** the client sends it, **Then** sign-in is refused with a generic message, and nothing from the provider is kept.
+9. **Given** a visitor with no account who has given the consents on the registration page, **When** they finish sign-in with a supported provider, **Then** the account is created and they are signed in without being asked again.
 
 ---
 
@@ -237,9 +243,9 @@ The verification e-mail sent at registration doubles as the welcome e-mail. User
 
 **External providers**
 
-- **FR-020**: System MUST let users register and log in with Google, Facebook and Twitter (X). If the provider reports an error, the user cancels at the provider, or the provider's response cannot be validated, System MUST return the user to the login screen with a generic "sign-in with <provider> did not complete" message, keep no provider data, and audit it as a failed login attempt (FR-014).
-- **FR-021**: System MUST show a consent interstitial on a user's first external sign-in and MUST NOT create an account or keep provider data until both required consents are accepted. Pending provider data waiting at the interstitial MUST be discarded after 10 minutes (default, configurable per FR-031); the user then has to start the provider sign-in again.
-- **FR-022**: System MUST treat an e-mail address returned by any supported provider (Google, Facebook, Twitter (X)) as confirmed. When it matches an existing account, System MUST link the provider identity to that account automatically. If that account's e-mail was never verified, linking MUST also mark it verified, remove its password and revoke its existing sessions, so that whoever registered the address without proving ownership loses access (protection against account pre-hijacking). Before the user is signed in to such an account, System MUST show the consent interstitial from FR-021 and record their answers as new consent records. Earlier consent records stay as history, marked superseded. Account data is kept. The user can set a password again through password reset (FR-036).
+- **FR-020**: System MUST let users register and log in with Google and Facebook. The client signs in at the provider and sends the provider's credential to System, which MUST check it with the provider before trusting anything in it: that it is genuine, unexpired and issued for Liftingo's own application at that provider. If the check fails, System MUST refuse the sign-in with a generic "sign-in with <provider> did not complete" message, keep no provider data, and audit it as a failed login attempt (FR-014). A sign-in the user cancels at the provider never reaches System and is not audited.
+- **FR-021**: System MUST NOT create an account or keep provider data until both required consents are given. The client MAY send the consents together with the provider credential. If a provider sign-in would create an account (or take one over, FR-022) and the consents are missing, System MUST answer that consents are required, store nothing, and let the client send the same credential again with the consents. System keeps no pending sign-in between the two requests; the provider credential's own expiry bounds how long the user can take.
+- **FR-022**: System MUST treat an e-mail address returned by any supported provider (Google, Facebook) as confirmed. When it matches an existing account, System MUST link the provider identity to that account automatically. If that account's e-mail was never verified, linking MUST also mark it verified, remove its password and revoke its existing sessions, so that whoever registered the address without proving ownership loses access (protection against account pre-hijacking). Before the user is signed in to such an account, System MUST require the consents as in FR-021, even if the account already has consents, and record them as new consent records. Earlier consent records stay as history, marked superseded. Account data is kept. The user can set a password again through password reset (FR-036).
 - **FR-022a**: If a provider identity is already linked to one account and the provider now returns an e-mail address that belongs to a **different** account, System MUST refuse the sign-in with a message, sign nobody in, and change neither account. E-mail addresses stay unique per account (FR-005). A provider e-mail that belongs to no account does not block sign-in to the linked account and does not change that account's e-mail.
 - **FR-023**: System MUST ask for an e-mail address when a provider does not supply one, and verify that address as in FR-016.
 - **FR-023a**: If the address typed in under FR-023 already belongs to an account, System MUST NOT link or create anything immediately. It MUST send a single-use link-confirmation e-mail, valid for 24 hours, to that address, and link the provider identity to the existing account only when the link is opened. Until then it keeps only the provider name and the provider's user identifier, attached to that link. Opening the link applies the same rules as FR-022 (an unverified account is marked verified, its password removed, its sessions revoked, and the consents asked for again) and signs the user in. The user is told to check their inbox. This reveals that the address has an account, which is accepted because e-mail registration already does (US1 AS-4). FR-037's limit applies to these e-mails as well.
@@ -257,7 +263,7 @@ The verification e-mail sent at registration doubles as the welcome e-mail. User
 **Privacy**
 
 - **FR-030**: Application and error logs MUST NOT contain e-mail addresses, passwords, names or credentials, except for the development-only e-mail output in FR-028.
-- **FR-031**: All time windows and thresholds in this feature (15 min access lifetime, 30-day inactivity, 90-day absolute session lifetime, 10 min pending provider data, 24 h verification and link-confirmation validity, 1 h reset link validity, 3 e-mails per address per hour, 5 attempts, 15 min lockout, 90-day audit retention, 12-month known-device retention, 24 h retention of unusable e-mail tokens) MUST be configuration values. So MUST the display time zone for e-mails (FR-026a).
+- **FR-031**: All time windows and thresholds in this feature (15 min access lifetime, 30-day inactivity, 90-day absolute session lifetime, 24 h verification and link-confirmation validity, 1 h reset link validity, 3 e-mails per address per hour, 5 attempts, 15 min lockout, 90-day audit retention, 12-month known-device retention, 24 h retention of unusable e-mail tokens) MUST be configuration values. So MUST the display time zone for e-mails (FR-026a).
 
 **Password reset**
 
@@ -311,11 +317,11 @@ This feature delivers the backend only. Criteria that depend on client behaviour
 ## Assumptions
 
 - "JWT access and refresh tokens" from the request map to the short-lived access credential and the rotating renewal credential in FR-008 – FR-011. On app start the client gets a fresh access credential by calling the renewal endpoint with the cookie.
-- The provider set (Google, Facebook, Twitter (X)) matches the PRD (change log #12) and the constitution v1.0.2. Apple sign-in is not part of this feature.
-- The Twitter (X) app is configured to require e-mail sharing, so X sign-ups are expected to supply an e-mail address (confirmed in review on 2026-10-12: the X app can be configured to return the verified e-mail). FR-023 stays as a fallback for any provider that returns none (for example, a Facebook account registered with a phone number).
-- E-mail addresses supplied by Google, Facebook and Twitter (X) are trusted as verified by those providers (confirmed in review on 2026-10-12: all three return verified addresses only). Linking by matching e-mail therefore relies on the providers' own checks. This risk is accepted to keep provider sign-in friction-free.
+- The provider set (Google, Facebook) matches the PRD (change log #14) and the constitution. Twitter (X) is deferred to a later feature (clarification 2026-10-14). Apple sign-in is not part of this feature.
+- FR-023 is a fallback for a provider that returns no e-mail, for example a Facebook account registered with a phone number. Google always returns one.
+- E-mail addresses supplied by Google and Facebook are trusted as verified by those providers (confirmed in review on 2026-10-12: both return verified addresses only). Linking by matching e-mail therefore relies on the providers' own checks. This risk is accepted to keep provider sign-in friction-free.
 - Withdrawing the health-data consent leads to account deletion (PRD NFR-22). Withdrawal and deletion are out of scope here.
-- Re-authentication for account deletion (PRD US-18) will use the same three providers. That flow is out of scope here.
+- Re-authentication for account deletion (PRD US-18) will use the same providers. That flow is out of scope here.
 - Account deletion, the 7-day deletion of unverified accounts, and the retention purge jobs are out of scope. This feature only stores the data those jobs need.
 - The restrictions for unverified users (no social features, no export, AI limited to 1 per 24 h) are enforced by those features. This feature only reports the verification status.
 - The onboarding questionnaire and body-data step that follow registration are a separate feature.
@@ -323,4 +329,5 @@ This feature delivers the backend only. Criteria that depend on client behaviour
 - E-mail content is in Polish to match the Polish-only UI (constitution V). Exact wording can be refined later.
 - A "device" is identified by a persistent identifier stored by the client app together with the device type. Clearing browser data makes the device count as new. The identifier is supplied by the client, so it can be faked. This risk is accepted: faking it needs the user's password and the identifier from the victim's browser, and its only effect is that no new-device e-mail is sent.
 - External provider credentials for local development are supplied by the developer through local configuration. Providers that are not configured are hidden or turned off instead of failing.
+- The client loads each provider's own sign-in script (Google Identity Services, the Facebook JavaScript SDK). Until the frontend feature exists, a development-only page served by the API does this so provider sign-in can be tried by hand.
 - The current Terms and Privacy Policy versions come from configuration. A re-acceptance flow for policy updates is out of scope (NFR-21).
