@@ -36,8 +36,6 @@ public sealed class AccountTakeover(
     /// </summary>
     public async Task StageAsync(Guid userId, TakeoverConsents newConsents, PasswordMode mode, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(newConsents);
-
         DateTimeOffset now = timeProvider.GetUtcNow();
 
         await identity.ConfirmEmailAsync(userId, ct);

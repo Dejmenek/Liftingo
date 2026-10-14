@@ -9,8 +9,6 @@ internal sealed partial class DisabledAuditSink(ILogger<DisabledAuditSink> logge
 {
     public Task WriteAsync(AuditRecord record, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(record);
-
         LogDropped(record.EventType);
 
         return Task.CompletedTask;

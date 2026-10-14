@@ -18,8 +18,6 @@ public sealed class RefreshSessionCommandHandler(
 
     public async Task<Result<RefreshSessionResponse>> HandleAsync(RefreshSessionCommand command, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(command);
-
         byte[]? tokenHash = command.RefreshToken is { } token ? OpaqueToken.Hash(token) : null;
 
         if (tokenHash is null)

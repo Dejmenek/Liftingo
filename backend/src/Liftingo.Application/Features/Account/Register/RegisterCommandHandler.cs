@@ -27,8 +27,6 @@ public sealed class RegisterCommandHandler(
 
     public async Task<Result<RegisterResponse>> HandleAsync(RegisterCommand command, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(command);
-
         ValidationResult validation = await validator.ValidateAsync(command, ct);
 
         if (!validation.IsValid)

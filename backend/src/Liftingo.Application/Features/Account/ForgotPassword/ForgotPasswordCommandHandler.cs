@@ -24,8 +24,6 @@ public sealed class ForgotPasswordCommandHandler(
 {
     public async Task<Result> HandleAsync(ForgotPasswordCommand command, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(command);
-
         ValidationResult validation = await validator.ValidateAsync(command, ct);
 
         if (!validation.IsValid)

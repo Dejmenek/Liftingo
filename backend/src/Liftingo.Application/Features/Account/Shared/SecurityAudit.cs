@@ -30,8 +30,6 @@ public sealed partial class SecurityAudit(
         ClientInfo client,
         CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(client);
-
         LogEvent(type, outcome, userId);
 
         var auditEvent = new SecurityAuditEvent(

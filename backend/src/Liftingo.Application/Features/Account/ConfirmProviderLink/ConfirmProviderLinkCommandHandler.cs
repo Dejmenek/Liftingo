@@ -36,8 +36,6 @@ public sealed class ConfirmProviderLinkCommandHandler(
 
     public async Task<Result<ConfirmProviderLinkResponse>> HandleAsync(ConfirmProviderLinkCommand command, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(command);
-
         ValidationResult validation = await validator.ValidateAsync(command, ct);
 
         if (!validation.IsValid)

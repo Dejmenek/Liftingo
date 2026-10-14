@@ -19,8 +19,6 @@ public sealed class ResendVerificationEmailCommandHandler(
 {
     public async Task<Result> HandleAsync(ResendVerificationEmailCommand command, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(command);
-
         Guid userId = userContext.UserId;
 
         // Success whatever happens, so the answer says nothing about the limit or the account state.

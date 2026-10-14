@@ -15,8 +15,6 @@ public static class SessionValidation
 {
     public static async Task OnTokenValidatedAsync(TokenValidatedContext context)
     {
-        ArgumentNullException.ThrowIfNull(context);
-
         ClaimsPrincipal? principal = context.Principal;
 
         string? subject = principal?.FindFirstValue("sub");
@@ -44,8 +42,6 @@ public static class SessionValidation
 
     public static Task OnAuthenticationFailedAsync(AuthenticationFailedContext context)
     {
-        ArgumentNullException.ThrowIfNull(context);
-
         // Make sure a store outage reaches the exception handler (503) however JwtBearerHandler
         // treats exceptions thrown from its events.
         if (context.Exception is SessionStoreUnavailableException)

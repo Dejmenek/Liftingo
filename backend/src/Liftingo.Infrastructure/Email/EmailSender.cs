@@ -19,8 +19,6 @@ public sealed partial class EmailSender(
         Justification = "A failed e-mail must never fail the flow that triggered it (FR-029); the failure is logged.")]
     public async Task SendAsync(OutgoingEmail email, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(email);
-
         try
         {
             await transport.SendAsync(renderer.Render(email), ct);

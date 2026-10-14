@@ -109,8 +109,6 @@ public sealed class EmailToken
         string? loginProvider,
         string? providerKey)
     {
-        ArgumentNullException.ThrowIfNull(tokenHash);
-
         if (tokenHash.Length != TokenHashLength)
         {
             throw new AccountDomainException("Skrót tokenu ma nieprawidłową długość.");

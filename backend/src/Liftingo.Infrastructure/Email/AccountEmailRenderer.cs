@@ -29,8 +29,6 @@ public sealed class AccountEmailRenderer(IOptions<AppOptions> appOptions, IOptio
     /// <returns>The template name of a record, or its type name when this renderer does not know it.</returns>
     public static string TemplateNameOf(OutgoingEmail email)
     {
-        ArgumentNullException.ThrowIfNull(email);
-
         return email switch
         {
             VerificationAndWelcomeEmail => VerificationAndWelcomeTemplate,
@@ -45,8 +43,6 @@ public sealed class AccountEmailRenderer(IOptions<AppOptions> appOptions, IOptio
 
     public EmailMessage Render(OutgoingEmail email)
     {
-        ArgumentNullException.ThrowIfNull(email);
-
         return email switch
         {
             VerificationAndWelcomeEmail e => VerificationAndWelcome(e),

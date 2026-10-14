@@ -47,8 +47,6 @@ public abstract class IntegrationTestBase(SqlServerFixture fixture) : IAsyncLife
     /// <summary>Runs <paramref name="action"/> with a fresh <see cref="ApplicationDbContext"/> from the host.</summary>
     protected async Task<T> WithDbAsync<T>(Func<ApplicationDbContext, Task<T>> action)
     {
-        ArgumentNullException.ThrowIfNull(action);
-
         await using AsyncServiceScope scope = Factory.Services.CreateAsyncScope();
 
         return await action(scope.ServiceProvider.GetRequiredService<ApplicationDbContext>());

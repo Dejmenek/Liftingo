@@ -15,8 +15,6 @@ public sealed partial class ConsoleEmailTransport(ILoggerFactory loggerFactory) 
 
     public Task SendAsync(EmailMessage message, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(message);
-
         LogEmail(message.TemplateName, message.To, message.Subject, message.TextBody);
 
         return Task.CompletedTask;

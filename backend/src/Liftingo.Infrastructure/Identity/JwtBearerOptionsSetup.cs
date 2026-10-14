@@ -22,8 +22,6 @@ internal sealed class JwtBearerOptionsSetup(IOptions<JwtOptions> jwtOptions, Tim
 
     public void Configure(JwtBearerOptions options)
     {
-        ArgumentNullException.ThrowIfNull(options);
-
         JwtOptions jwt = jwtOptions.Value;
 
         // Keep sub, sid and email_verified under their JWT names.

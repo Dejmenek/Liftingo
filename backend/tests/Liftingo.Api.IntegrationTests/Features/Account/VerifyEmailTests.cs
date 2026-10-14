@@ -157,9 +157,6 @@ public class VerifyEmailTests(SqlServerFixture fixture) : IntegrationTestBase(fi
     /// <summary>Registers an account and returns the session and the token from its (then cleared) welcome e-mail.</summary>
     internal static async Task<(AuthSessionResponse Session, string Token)> RegisterAsync(AuthTestClient client, ApiFactory factory)
     {
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(factory);
-
         (HttpResponseMessage response, _) = await client.RegisterAsync();
         using HttpResponseMessage owned = response;
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);

@@ -122,8 +122,6 @@ public sealed partial class AuthTestClient(Func<bool, HttpClient> createClient) 
 
     public static async Task<AuthSessionResponse> ReadSessionAsync(HttpResponseMessage response)
     {
-        ArgumentNullException.ThrowIfNull(response);
-
         return await response.Content.ReadFromJsonAsync<AuthSessionResponse>(TestContext.Current.CancellationToken)
             ?? throw new InvalidOperationException("The response has no session body.");
     }
@@ -131,8 +129,6 @@ public sealed partial class AuthTestClient(Func<bool, HttpClient> createClient) 
     /// <summary>Parses the <c>Set-Cookie</c> header for <c>liftingo_rt</c>, or returns <c>null</c> when there is none.</summary>
     public static RefreshCookie? ReadRefreshCookie(HttpResponseMessage response)
     {
-        ArgumentNullException.ThrowIfNull(response);
-
         if (!response.Headers.TryGetValues("Set-Cookie", out IEnumerable<string>? values))
         {
             return null;
@@ -169,8 +165,6 @@ public sealed partial class AuthTestClient(Func<bool, HttpClient> createClient) 
     /// <summary>Pulls the <c>token</c> query value out of the link in an e-mail's text body.</summary>
     public static string ExtractToken(EmailMessage message)
     {
-        ArgumentNullException.ThrowIfNull(message);
-
         Match match = TokenInLink().Match(message.TextBody);
 
         return match.Success

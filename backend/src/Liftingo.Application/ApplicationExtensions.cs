@@ -18,8 +18,6 @@ public static class ApplicationExtensions
 
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
-        ArgumentNullException.ThrowIfNull(services);
-
         foreach (Type type in typeof(ApplicationExtensions).Assembly.GetTypes().Where(IsConcreteClass))
         {
             foreach (Type handlerInterface in type.GetInterfaces().Where(IsHandlerInterface))

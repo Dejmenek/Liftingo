@@ -8,8 +8,6 @@ public sealed class GetExternalProvidersQueryHandler(IExternalProviderCatalog ca
 {
     public Task<Result<GetExternalProvidersResponse>> HandleAsync(GetExternalProvidersQuery query, CancellationToken ct)
     {
-        ArgumentNullException.ThrowIfNull(query);
-
         Result<GetExternalProvidersResponse> result = new GetExternalProvidersResponse(
             [.. catalog.Providers.Select(provider => new ExternalProviderSummary(provider.RouteName, provider.ClientId))]);
 
