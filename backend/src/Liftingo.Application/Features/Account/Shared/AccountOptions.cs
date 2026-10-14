@@ -37,13 +37,6 @@ public sealed class EmailTokensOptions
     public TimeSpan RetentionAfterUnusable { get; init; }
 }
 
-public sealed class ExternalLoginOptions
-{
-    public const string SectionName = "ExternalLogin";
-
-    public TimeSpan PendingTimeout { get; init; }
-}
-
 public sealed class AuditOptions
 {
     public const string SectionName = "Audit";
@@ -138,19 +131,6 @@ public sealed class EmailTokensOptionsValidator : IValidateOptions<EmailTokensOp
         {
             failures.Add($"'{EmailTokensOptions.SectionName}:{nameof(EmailTokensOptions.MaxPerAddressPerHour)}' must be at least 1.");
         }
-
-        return OptionsValidation.ToResult(failures);
-    }
-}
-
-public sealed class ExternalLoginOptionsValidator : IValidateOptions<ExternalLoginOptions>
-{
-    public ValidateOptionsResult Validate(string? name, ExternalLoginOptions options)
-    {
-        List<string> failures = [];
-
-        OptionsValidation.RequirePositive(
-            ExternalLoginOptions.SectionName, nameof(ExternalLoginOptions.PendingTimeout), options.PendingTimeout, failures);
 
         return OptionsValidation.ToResult(failures);
     }
