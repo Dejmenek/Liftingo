@@ -147,7 +147,7 @@ test, R25) each have a fallback that keeps the design valid.
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.* Checked against
-constitution **v2.0.0**.
+constitution **v2.0.0**, re-checked against **v2.1.1** for rev. f.
 
 | Principle | Check | Status |
 |---|---|---|
@@ -156,7 +156,7 @@ constitution **v2.0.0**.
 | **III. Privacy and compliance (non-negotiable)** | Unchanged from rev. d, plus: the Redis lockout key is a hash of the address, never the address (R21); e-mail records carry no rendered text, and the sender logs only the e-mail type and user id on failure (R24). Consents, audit encryption, crypto-shredding, log masking and the dev-only e-mail and audit sinks stay as they are. | ✅ Pass |
 | **IV. Explainable AI boundary** | Not touched. `IsEmailVerified` is exposed so the AI feature can apply the unverified quota later. | ✅ N/A |
 | **V. Offline-first, mobile-first PWA** | No UI in this feature. The API supports the offline rule: a network failure on refresh is distinguishable from a `401` (R16). | ✅ N/A |
-| **VI. Test-backed delivery** | Integration tests per endpoint against real SQL Server and Redis containers stay the safety net and must pass unchanged after every refactor step. New: Redis throttle tests including a second-instance check, renderer and time-zone tests, options validation for the zone, and layer-responsibility architecture tests (quickstart). Naming `[Method]_[Scenario]_[ExpectedResult]`; test files mirror the new slice folders. | ✅ Pass |
+| **VI. Test-backed delivery** | Rev. f: the provider login endpoint is verified by hand on the development page (quickstart 8–10), because it depends on the providers' own sign-in; the helpers it shares with other slices (`AccountTakeover`, `SessionIssuer`, `EmailTokenIssuer`) keep their automated coverage. Otherwise: integration tests per endpoint against real SQL Server and Redis containers stay the safety net and must pass unchanged after every refactor step. New: Redis throttle tests including a second-instance check, renderer and time-zone tests, options validation for the zone, and layer-responsibility architecture tests (quickstart). Naming `[Method]_[Scenario]_[ExpectedResult]`; test files mirror the new slice folders. | ✅ Pass |
 | **VII. Contract-driven frontend** | No frontend in scope. The contract and the OpenAPI document do not change in rev. e. | ✅ N/A |
 | **VIII. Simplicity and scope** | Rev. f swaps three authentication handler packages for one (`Google.Apis.Auth`, for Google's ID-token signature check); Facebook needs only two HTTP calls. Rev. e added no third-party dependency. The new types each answer a current rule: `ILoginThrottle` (FR-013 clarification), e-mail records and transport split (Principle I: templates out of Application), `IssuedSession` and `ExternalIdentity` (HTTP out of handlers). Reflection-based handler registration instead of Scrutor. No templating engine, outbox or Hangfire. | ✅ Pass |
 | **Tech stack** | Identity + Google/Facebook sign-in from client-supplied tokens (constitution v2.1.1) + JWT with refresh tokens, Redis, Log Analytics for the audit log. | ✅ Pass |
