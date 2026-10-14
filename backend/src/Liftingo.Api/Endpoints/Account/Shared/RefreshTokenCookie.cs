@@ -12,15 +12,11 @@ internal sealed class RefreshTokenCookie(IOptions<RefreshCookieOptions> options)
 
     public static string? Read(HttpRequest request)
     {
-        ArgumentNullException.ThrowIfNull(request);
         return request.Cookies.TryGetValue(Name, out string? value) && !string.IsNullOrEmpty(value) ? value : null;
     }
+
     public void Append(HttpResponse response, IssuedSession session)
     {
-        ArgumentNullException.ThrowIfNull(response);
-        ArgumentNullException.ThrowIfNull(session);
-        ArgumentException.ThrowIfNullOrEmpty(session.RefreshToken);
-
         TimeSpan lifetime = session.RefreshTokenLifetime > s_maxLifetime ? s_maxLifetime : session.RefreshTokenLifetime;
 
         response.Cookies.Append(Name, session.RefreshToken, CreateOptions(lifetime));
@@ -28,7 +24,6 @@ internal sealed class RefreshTokenCookie(IOptions<RefreshCookieOptions> options)
 
     public void Delete(HttpResponse response)
     {
-        ArgumentNullException.ThrowIfNull(response);
         response.Cookies.Delete(Name, CreateOptions(maxAge: null));
     }
 

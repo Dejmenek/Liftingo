@@ -10,7 +10,6 @@ public sealed record AuthSessionResponse(string AccessToken, DateTimeOffset Acce
 {
     public static AuthSessionResponse From(IssuedSession session)
     {
-        ArgumentNullException.ThrowIfNull(session);
         return new AuthSessionResponse(session.AccessToken, session.AccessTokenExpiresAt, AccountResponse.From(session.Account));
     }
 }

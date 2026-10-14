@@ -18,7 +18,6 @@ public sealed class RetryAfterProblemResult(ProblemHttpResult problem, DateTimeO
 
     public Task ExecuteAsync(HttpContext httpContext)
     {
-        ArgumentNullException.ThrowIfNull(httpContext);
         TimeProvider timeProvider = httpContext.RequestServices?.GetService(typeof(TimeProvider)) as TimeProvider
             ?? TimeProvider.System;
 

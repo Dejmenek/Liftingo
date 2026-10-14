@@ -24,7 +24,6 @@ internal sealed class IpAddressMaskingOperator : RegexMaskingOperator
 
     protected override bool ShouldMaskMatch(Match match)
     {
-        ArgumentNullException.ThrowIfNull(match);
         string value = match.Value;
 
         if (!value.Contains(':', StringComparison.Ordinal))

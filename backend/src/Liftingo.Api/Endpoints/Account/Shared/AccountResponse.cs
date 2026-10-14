@@ -11,7 +11,6 @@ public sealed record AccountResponse(
 {
     public static AccountResponse From(AccountSummary summary)
     {
-        ArgumentNullException.ThrowIfNull(summary);
         return new AccountResponse(summary.Id, summary.Email, summary.EmailVerified, summary.HasPassword, summary.Providers);
     }
 }

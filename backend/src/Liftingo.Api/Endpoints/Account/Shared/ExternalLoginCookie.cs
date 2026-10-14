@@ -18,7 +18,6 @@ internal static class ExternalLoginCookie
 
     public static async Task<ExternalIdentity?> ReadAsync(HttpContext http)
     {
-        ArgumentNullException.ThrowIfNull(http);
         AuthenticateResult result = await http.AuthenticateAsync(AuthenticationSchemes.External);
 
         if (!result.Succeeded || result.Principal is null || result.Properties is null)
@@ -47,10 +46,9 @@ internal static class ExternalLoginCookie
             result.Principal.FindFirstValue(ClaimTypes.Name),
             deviceId);
     }
+
     public static Task ClearAsync(HttpContext http)
     {
-        ArgumentNullException.ThrowIfNull(http);
-
         return http.SignOutAsync(AuthenticationSchemes.External);
     }
 
