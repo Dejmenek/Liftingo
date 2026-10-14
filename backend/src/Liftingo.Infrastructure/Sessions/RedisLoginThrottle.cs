@@ -50,7 +50,7 @@ public sealed class RedisLoginThrottle(
             DateTimeOffset end = DateTimeOffset.FromUnixTimeMilliseconds(endMilliseconds);
 
             return end > timeProvider.GetUtcNow() ? end : null;
-        });
+        }, ct);
     }
 
     public async Task<PasswordCheckResult.LockoutTriggered?> RegisterFailureAsync(string email, CancellationToken ct)
@@ -77,7 +77,7 @@ public sealed class RedisLoginThrottle(
             return outcome is AlreadyLockedOut or Counted
                 ? null
                 : new PasswordCheckResult.LockoutTriggered(DateTimeOffset.FromUnixTimeMilliseconds(outcome));
-        });
+        }, ct);
     }
 
     internal static RedisKey KeyFor(string email) =>

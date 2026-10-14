@@ -1,8 +1,6 @@
-using System.Reflection;
-
 using Liftingo.Application.Common.Exceptions;
-
 using StackExchange.Redis;
+using System.Reflection;
 
 namespace Liftingo.Infrastructure.Sessions;
 
@@ -10,7 +8,7 @@ namespace Liftingo.Infrastructure.Sessions;
 internal static class RedisCalls
 {
     // Redis connection and timeout errors become one exception that Api maps to 503.
-    public static async Task<T> GuardAsync<T>(Func<Task<T>> operation)
+    public static async Task<T> GuardAsync<T>(Func<Task<T>> operation, CancellationToken ct)
     {
         try
         {
@@ -23,6 +21,10 @@ internal static class RedisCalls
         catch (RedisTimeoutException ex)
         {
             throw new SessionStoreUnavailableException("The session store did not answer in time.", ex);
+        }
+        catch (OperationCanceledException ex) when (!ct.IsCancellationRequested)
+        {
+            throw new SessionStoreUnavailableException("The session store abandoned the command.", ex);
         }
     }
 
