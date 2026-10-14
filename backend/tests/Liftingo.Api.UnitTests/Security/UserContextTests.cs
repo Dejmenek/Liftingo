@@ -1,8 +1,6 @@
-using System.Security.Claims;
-
 using Liftingo.Api.Security;
-
 using Microsoft.AspNetCore.Http;
+using System.Security.Claims;
 
 namespace Liftingo.Api.UnitTests.Security;
 

@@ -1,9 +1,7 @@
-using System.Security.Cryptography;
-
 using Liftingo.Infrastructure.Persistence;
-
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
 
 namespace Liftingo.Infrastructure.Audit;
 

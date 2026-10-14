@@ -1,6 +1,5 @@
-using System.Net;
-
 using Microsoft.AspNetCore.HttpOverrides;
+using System.Net;
 
 namespace Liftingo.Api.Extensions;
 

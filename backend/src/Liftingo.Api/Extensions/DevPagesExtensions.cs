@@ -1,6 +1,5 @@
-using System.Text;
-
 using Liftingo.Api.Endpoints;
+using System.Text;
 
 namespace Liftingo.Api.Extensions;
 

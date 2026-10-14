@@ -1,6 +1,6 @@
-using Liftingo.Application.Common.Messaging;
 using Liftingo.Application.Common;
 using Liftingo.Application.Common.Email;
+using Liftingo.Application.Common.Messaging;
 using Liftingo.Application.Common.Persistence;
 using Liftingo.Application.Common.Result;
 using Liftingo.Application.Common.Security;

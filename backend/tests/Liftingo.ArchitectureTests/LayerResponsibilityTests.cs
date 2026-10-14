@@ -1,10 +1,7 @@
-using System.Text.RegularExpressions;
-
 using ArchUnitNET.Domain;
 using ArchUnitNET.xUnitV3;
-
 using Liftingo.Application.Common.Messaging;
-
+using System.Text.RegularExpressions;
 using static ArchUnitNET.Fluent.ArchRuleDefinition;
 
 namespace Liftingo.ArchitectureTests;

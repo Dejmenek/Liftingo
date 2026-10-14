@@ -1,16 +1,13 @@
-using System.Net;
-using System.Net.Http.Json;
-using System.Text.Json;
-
 using Liftingo.Api.Endpoints.Account.Shared;
 using Liftingo.Api.IntegrationTests.Infrastructure;
 using Liftingo.Domain.Account;
 using Liftingo.Infrastructure.Audit;
-
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.JsonWebTokens;
-
 using StackExchange.Redis;
+using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace Liftingo.Api.IntegrationTests.Features.Account;
 

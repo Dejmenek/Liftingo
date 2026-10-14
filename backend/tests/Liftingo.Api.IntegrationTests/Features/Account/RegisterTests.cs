@@ -1,17 +1,14 @@
-using System.Net;
-using System.Net.Http.Json;
-using System.Text.Json;
-
 using Liftingo.Api.Endpoints.Account.Shared;
 using Liftingo.Api.IntegrationTests.Infrastructure;
 using Liftingo.Api.IntegrationTests.Infrastructure.Fakers;
 using Liftingo.Application.Common.Security;
 using Liftingo.Domain.Account;
 using Liftingo.Infrastructure.Email;
-
 using Microsoft.EntityFrameworkCore;
-
 using Serilog.Events;
+using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace Liftingo.Api.IntegrationTests.Features.Account;
 

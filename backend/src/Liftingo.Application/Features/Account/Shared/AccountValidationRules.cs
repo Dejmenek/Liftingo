@@ -1,6 +1,5 @@
-using System.ComponentModel.DataAnnotations;
-
 using FluentValidation;
+using System.ComponentModel.DataAnnotations;
 
 namespace Liftingo.Application.Features.Account.Shared;
 

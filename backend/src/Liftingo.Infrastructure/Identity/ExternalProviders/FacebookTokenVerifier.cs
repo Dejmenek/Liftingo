@@ -1,12 +1,10 @@
+using Liftingo.Application.Common.Security;
+using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Serialization;
-
-using Liftingo.Application.Common.Security;
-
-using Microsoft.Extensions.Logging;
 
 namespace Liftingo.Infrastructure.Identity.ExternalProviders;
 

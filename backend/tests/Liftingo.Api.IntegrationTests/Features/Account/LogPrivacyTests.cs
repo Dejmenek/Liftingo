@@ -1,15 +1,12 @@
-using System.Globalization;
-using System.Net;
-using System.Text;
-
 using Liftingo.Api.Endpoints;
 using Liftingo.Api.Endpoints.Account.Shared;
 using Liftingo.Api.IntegrationTests.Infrastructure;
-
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-
 using Serilog.Events;
+using System.Globalization;
+using System.Net;
+using System.Text;
 
 namespace Liftingo.Api.IntegrationTests.Features.Account;
 

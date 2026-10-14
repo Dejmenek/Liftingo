@@ -1,11 +1,9 @@
-using System.Runtime.ExceptionServices;
-using System.Security.Claims;
-
 using Liftingo.Application.Common.Exceptions;
 using Liftingo.Application.Common.Security;
-
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection;
+using System.Runtime.ExceptionServices;
+using System.Security.Claims;
 
 namespace Liftingo.Infrastructure.Identity;
 

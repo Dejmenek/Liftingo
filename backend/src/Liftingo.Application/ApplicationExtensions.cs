@@ -1,12 +1,9 @@
-using System.Reflection;
-using System.Runtime.CompilerServices;
-
 using FluentValidation;
-
 using Liftingo.Application.Common.Messaging;
 using Liftingo.Application.Features.Account.Shared;
-
 using Microsoft.Extensions.DependencyInjection;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace Liftingo.Application;
 

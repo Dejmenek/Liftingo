@@ -1,14 +1,11 @@
-using System.Net;
-
 using Liftingo.Api.Endpoints;
 using Liftingo.Api.Endpoints.Account.Shared;
 using Liftingo.Api.IntegrationTests.Infrastructure;
 using Liftingo.Domain.Account;
 using Liftingo.Infrastructure.Email;
-
 using Microsoft.EntityFrameworkCore;
-
 using Serilog.Events;
+using System.Net;
 
 namespace Liftingo.Api.IntegrationTests.Features.Account;
 

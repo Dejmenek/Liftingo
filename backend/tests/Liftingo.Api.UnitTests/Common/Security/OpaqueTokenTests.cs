@@ -1,8 +1,7 @@
+using Liftingo.Application.Common.Security;
 using System.Buffers.Text;
 using System.Security.Cryptography;
 using System.Text;
-
-using Liftingo.Application.Common.Security;
 
 namespace Liftingo.Api.UnitTests.Common.Security;
 

@@ -1,17 +1,15 @@
-using System.Text.RegularExpressions;
-
 using Liftingo.Application.Common.Exceptions;
 using Liftingo.Application.Common.Persistence;
 using Liftingo.Domain.Account;
 using Liftingo.Infrastructure.Audit;
 using Liftingo.Infrastructure.Identity;
-
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using System.Text.RegularExpressions;
 
 namespace Liftingo.Infrastructure.Persistence;
 

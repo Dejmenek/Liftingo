@@ -1,10 +1,8 @@
-using System.Globalization;
-
 using Liftingo.Application.Common.Exceptions;
-
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Net.Http.Headers;
+using System.Globalization;
 
 namespace Liftingo.Api.ExceptionHandling;
 

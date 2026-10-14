@@ -1,13 +1,10 @@
-using System.Buffers.Text;
-using System.Globalization;
-
 using Liftingo.Application.Common.Exceptions;
 using Liftingo.Application.Common.Security;
 using Liftingo.Application.Features.Account.Shared;
-
 using Microsoft.Extensions.Options;
-
 using StackExchange.Redis;
+using System.Buffers.Text;
+using System.Globalization;
 
 namespace Liftingo.Infrastructure.Sessions;
 

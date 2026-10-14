@@ -1,10 +1,8 @@
-using System.Security.Cryptography;
-
 using Liftingo.Application.Common.Result;
 using Liftingo.Application.Common.Security;
-
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
+using System.Security.Cryptography;
 
 namespace Liftingo.Infrastructure.Identity;
 
