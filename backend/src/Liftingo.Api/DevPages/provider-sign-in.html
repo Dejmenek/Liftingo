@@ -145,20 +145,53 @@
 
     async function setUpFacebook(appId) {
       await loadScript('https://connect.facebook.net/en_US/sdk.js');
-      FB.init({ appId, version: facebookGraphVersion, xfbml: false, cookie: false });
+      // The SDK's remote configuration can switch on its FedCM login. On that path FB.login starts a browser
+      // credential request that shows nothing and never calls back, so the classic popup is forced.
+      FB.init({ appId, version: facebookGraphVersion, xfbml: false, cookie: false, fedCM: false });
+      log(`Facebook SDK loaded: app id ${appId}, Graph ${facebookGraphVersion}, page origin ${location.origin}`);
+
+      // Shows whether the SDK can talk to Facebook for this app and origin at all, before any click.
+      FB.getLoginStatus(response => log(`Facebook login status on load:\n${describeFacebookResponse(response)}`));
 
       const button = byId('facebook-button');
       button.hidden = false;
       button.addEventListener('click', () => {
-        FB.login(response => {
-          if (response.authResponse) {
-            useToken('facebook', response.authResponse.accessToken);
-            send();
-          } else {
-            log('Facebook sign-in was cancelled.');
-          }
-        }, { scope: 'email' });
+        log('Opening the Facebook login popup...');
+
+        try {
+          FB.login(response => {
+            log(`Facebook login answered:\n${describeFacebookResponse(response)}`);
+
+            if (response.authResponse) {
+              useToken('facebook', response.authResponse.accessToken);
+              send();
+            }
+          }, { scope: 'email', return_scopes: true });
+        } catch (error) {
+          log(`FB.login threw: ${error}`);
+        }
       });
+    }
+
+    // The SDK answers "unknown" both when the popup was closed and when it never opened (blocked by the browser or
+    // an extension), and "not_authorized" when the person is signed in to Facebook but the app was refused.
+    function describeFacebookResponse(response) {
+      const meaning = {
+        connected: 'signed in and the app is authorized',
+        not_authorized: 'signed in to Facebook, but the app was not authorized (refused, or Facebook rejected the app settings)',
+        unknown: 'no answer from Facebook: popup closed, blocked by the browser or an extension, or not signed in',
+      }[response?.status] ?? 'unexpected status';
+
+      // The token itself already goes to the token field; shorten it here.
+      const shown = structuredClone(response ?? {});
+      if (shown.authResponse?.accessToken) {
+        shown.authResponse.accessToken = shown.authResponse.accessToken.slice(0, 12) + '...';
+      }
+      if (shown.authResponse?.signedRequest) {
+        shown.authResponse.signedRequest = '(omitted)';
+      }
+
+      return `status: ${response?.status} (${meaning})\n${JSON.stringify(shown, null, 2)}`;
     }
 
     async function start() {
