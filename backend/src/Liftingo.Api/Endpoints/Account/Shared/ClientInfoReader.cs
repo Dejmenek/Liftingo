@@ -8,17 +8,15 @@ internal static class ClientInfoReader
 
     public static ClientInfo Read(HttpContext http, Guid? deviceIdOverride = null)
     {
-        ArgumentNullException.ThrowIfNull(http);
         return ClientInfo.Create(
             http.Connection.RemoteIpAddress?.ToString(),
             http.Request.Headers.UserAgent.ToString(),
             http.Request.Headers[DeviceIdHeader].ToString(),
             deviceIdOverride);
     }
+
     public static ClientInfo ReadPreferringHeader(HttpContext http, Guid? fallbackDeviceId)
     {
-        ArgumentNullException.ThrowIfNull(http);
-
         bool headerHasId = ClientInfo.ParseDeviceId(http.Request.Headers[DeviceIdHeader].ToString()) is not null;
 
         return Read(http, headerHasId ? null : fallbackDeviceId);

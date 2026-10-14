@@ -15,7 +15,6 @@ public static class ResultExtensions
     /// </summary>
     public static IResult ToProblem(this Result result)
     {
-        ArgumentNullException.ThrowIfNull(result);
         if (result.IsSuccess)
         {
             throw new InvalidOperationException("Cannot map a successful result to a problem response.");
