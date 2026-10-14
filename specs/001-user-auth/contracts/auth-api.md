@@ -278,7 +278,7 @@ Refusals (nothing persisted, never counted as a failed login attempt):
 |---|---|
 | `400 Validation.*` | `token` empty, or `email` not a valid address |
 | `400 Auth.ConsentRequired` | consents needed and not both given. Extensions: `accountExists` (`true` for a takeover, so the page can explain why consents are asked again) and `emailRequired` (`true` when the provider gave no e-mail and none was sent) |
-| `400 Validation.EmailRequired` | consents given, provider gave no e-mail, and `email` is empty |
+| `400 Validation.General` (`errors[].code` = `Validation.EmailRequired`) | consents given, provider gave no e-mail, and `email` is empty |
 | `401 Auth.ExternalLoginFailed` | credential invalid, expired, or issued for another application (FR-020); audit `ExternalLogin` `Failed` without user, IP or device |
 | `404 Auth.ProviderUnavailable` | provider unknown or not configured |
 | `409 Auth.ProviderEmailConflict` | login linked to account A, provider e-mail belongs to account B (FR-022a); audit `ExternalLogin` `Failed` for A |

@@ -59,7 +59,7 @@ Coverage that must exist (by spec success criterion):
 | SC-002, FR-010a | `RefreshSessionTests`: refresh resets the session TTL; a missing session key → 401; near the 90-day cap the TTL and cookie `Max-Age` are capped, and after it refresh → 401 even with daily renewals |
 | SC-003 | `LogoutTests`: refresh and bearer use both rejected after logout |
 | SC-004, FR-012 | `LoginTests`: 6th attempt → 429 with `retryAfter` 15 min ahead; after `LockoutEnd` is moved into the past in the database (Identity reads `DateTimeOffset.UtcNow`, not the fake clock), login works and the counter is 0; the unknown-e-mail throttle is driven by the fake clock; attempts during the lockout (even with the right password) are not counted and don't move `retryAfter` |
-| SC-005 | `SecurityAuditTests` (one captured record per attempt/event, IP and device decrypt with the user's key; unknown-e-mail and failed-provider records have no user, IP or device) and `LogPrivacyTests` (no e-mail, password, token or IP in captured logs) |
+| SC-005 | `SecurityAuditTests` (one captured record per attempt/event, IP and device decrypt with the user's key; unknown-e-mail records have no user, IP or device; for failed provider credentials see manual scenario 8) and `LogPrivacyTests` (no e-mail, password, token or IP in captured logs) |
 | SC-006 | `RegisterTests` etc.: the captured e-mail exists when the response returns |
 | SC-007 | `RegisterTests`: missing consent → no user row; success → 3 consent rows with version. Provider sign-up: manual scenario 8 |
 | SC-008 | `LoginTests` / `ForgotPasswordTests`: identical status and body for known and unknown e-mail, including lockout |

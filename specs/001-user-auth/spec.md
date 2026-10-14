@@ -26,7 +26,7 @@
 - Q: After a session is revoked, does its unexpired access credential keep working? → A: No. Revoking a session (logout, sign out of all devices, password reset, renewal-credential reuse) makes its access credential stop working on the next request.
 - Q: Do failed logins for an unregistered e-mail lead to the same lockout response? → A: Yes. Unregistered addresses get the same counter, the same 15-minute lockout and the same retry-time message, so the lockout reveals nothing.
 - Q: What happens when the e-mail a user types in at the provider fallback (FR-023) already belongs to an account? → A: A single-use link valid for 24 hours is sent to that address, and the provider is linked to the existing account only when the link is opened. The user is told to check their inbox. This response differs from the new-address case (account created and signed in); that is accepted because e-mail registration already reveals registered addresses (US1 AS-4).
-- Q: When a provider sign-in takes over an unverified account (pre-hijack protection), must the owner give the required consents again? → A: Yes. The consent interstitial is shown before they are signed in, their consents are recorded as new records, earlier ones are kept as history marked superseded, and account data is kept.
+- Q: When a provider sign-in takes over an unverified account (pre-hijack protection), must the owner give the required consents again? → A: Yes. The consents are asked for before they are signed in (see 2026-10-14 for how), their consents are recorded as new records, earlier ones are kept as history marked superseded, and account data is kept.
 
 ### Session 2026-10-13
 
@@ -39,6 +39,7 @@
 - Q: Is Twitter (X) still in scope? → A: No, it is deferred to a later feature. X has no identity token, so the client cannot hand the API a credential the way it does for Google and Facebook. This feature supports Google and Facebook. The PRD and the constitution were amended to match. This replaces the provider answers of 2026-10-12.
 - Q: How does a provider sign-in reach the API? → A: The client signs in at the provider itself and sends the provider's credential (a Google identity token, a Facebook access token) to the API, which checks it with the provider and signs the user in. The API keeps no state between the provider and the client: no redirects, no temporary cookie.
 - Q: When are the consents for a provider sign-up given? → A: Either before the provider sign-in (the registration page asks for them first) or after it, when the API answers that consents are required (the user started from the login page and has no account yet). In the second case the client sends the same provider credential again together with the consents. Nothing is stored until the consents arrive.
+- Q: How is provider sign-in verified? → A: By hand, with real Google and Facebook accounts on a development-only page. It depends on the providers' own sign-in, so there are no automated tests that fake the provider.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -306,7 +307,7 @@ The verification e-mail sent at registration doubles as the welcome e-mail. User
 - **SC-004**: The sixth login attempt after 5 consecutive failures is rejected 100% of the time until 15 minutes have passed.
 - **SC-005**: 100% of login attempts and listed security events (FR-014) produce an audit record, and no application log entry contains an e-mail address or password (checked by automated tests).
 - **SC-006**: Verification/welcome, welcome-only, password reset and new-device e-mails show up in the local development output within 5 seconds of the action that triggers them.
-- **SC-007**: No account is ever created without both required consents recorded with timestamp and document version (checked by automated tests for e-mail and every supported external provider).
+- **SC-007**: No account is ever created without both required consents recorded with timestamp and document version (checked by automated tests for e-mail registration, and by hand for every supported external provider).
 - **SC-008**: An attacker cannot tell from the login or password-reset response whether an e-mail address is registered.
 - **SC-009**: A user who has forgotten their password can regain access in under 3 minutes, and after the reset 100% of their previous sessions are rejected.
 - **SC-010**: No credential that can renew a session is readable by page scripts or stored in persistent browser storage (verified by inspecting the client after login).
