@@ -1,15 +1,21 @@
 @Liftingo.Api_HostAddress = https://localhost:7056
+# Must be a valid GUID: an invalid one counts as a new device on every request
 @DeviceId = 3f2c1b8e-6d1a-4c52-9a0e-1d2f3a4b5c6d
 # A second "device": use it to trigger the new-device e-mail
 @DeviceId2 = 9b7e4a10-52c3-4d8f-8a61-0c4e7f2d9a33
 @Email = anna@example.pl
 @Password = Sztanga1!
 @NewPassword = Nowe1haslo!
-# Paste from the register/login response body
-@AccessToken =
+# The access token comes from the last "Login: valid" response ({{login.response.body.$.accessToken}}),
+# so send that request before the ones that need a bearer token.
+# The refresh token travels only in the liftingo_rt cookie, and this client keeps no cookies. Copy the value
+# between "liftingo_rt=" and the first ";" from the Set-Cookie response header of a login, register or refresh.
+# Every refresh replaces it: copy the new value each time, because sending a used one again ends the session.
+@RefreshCookie = 6MwEh8N0PscwA_sdcBXjUeEc1C6IGvjxblIUPx5GMXg
+
 # Paste the token query value from the e-mail links printed in the console (Liftingo.DevEmail)
-@VerificationToken =
-@ResetToken =
+@VerificationToken = 
+@ResetToken = 
 @LinkToken =
 # Provider login: google or facebook, and a Google ID token or Facebook access token from /dev/provider-sign-in
 @Provider = google
@@ -54,12 +60,8 @@ X-Device-Id: {{DeviceId}}
   "acceptMarketing": false
 }
 
-### Current account: paste the accessToken from a register response
-GET {{Liftingo.Api_HostAddress}}/api/v1/auth/me
-Authorization: Bearer {{AccessToken}}
-Accept: application/json
-
 ### Login: valid (200 + liftingo_rt cookie). A new X-Device-Id sends the new-device e-mail
+# @name login
 POST {{Liftingo.Api_HostAddress}}/api/v1/auth/login
 Content-Type: application/json
 X-Device-Id: {{DeviceId}}
@@ -68,6 +70,11 @@ X-Device-Id: {{DeviceId}}
   "email": "{{Email}}",
   "password": "{{Password}}"
 }
+
+### Current account: uses the access token from "Login: valid"
+GET {{Liftingo.Api_HostAddress}}/api/v1/auth/me
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Accept: application/json
 
 ### Login: from a second device (200 + a new-device e-mail in the console)
 POST {{Liftingo.Api_HostAddress}}/api/v1/auth/login
@@ -89,15 +96,18 @@ X-Device-Id: {{DeviceId}}
   "password": "Zle-haslo1!"
 }
 
-### Refresh: needs the liftingo_rt cookie from login or register (200 + rotated cookie, or 401 Auth.SessionInvalid)
+### Refresh: needs @RefreshCookie (200 + a new liftingo_rt value to copy into @RefreshCookie, or 401 Auth.SessionInvalid)
 POST {{Liftingo.Api_HostAddress}}/api/v1/auth/session/refresh
+Cookie: liftingo_rt={{RefreshCookie}};
 
 ### Logout this device: only the cookie is needed (204, always)
 POST {{Liftingo.Api_HostAddress}}/api/v1/auth/session/logout
+Cookie: liftingo_rt={{RefreshCookie}}
 
 ### Logout everywhere: signs out every device, including this one (204)
 POST {{Liftingo.Api_HostAddress}}/api/v1/auth/session/logout-all
-Authorization: Bearer {{AccessToken}}
+Authorization: Bearer {{login.response.body.$.accessToken}}
+Cookie: liftingo_rt={{RefreshCookie}}
 
 ### Verify e-mail: token from the verification e-mail (200 verified or alreadyVerified, 400 Auth.VerificationLinkInvalid)
 POST {{Liftingo.Api_HostAddress}}/api/v1/auth/email/verify
@@ -109,7 +119,7 @@ Content-Type: application/json
 
 ### Resend the verification e-mail (202 always; nothing is sent when verified or at 3 per hour)
 POST {{Liftingo.Api_HostAddress}}/api/v1/auth/email/resend-verification
-Authorization: Bearer {{AccessToken}}
+Authorization: Bearer {{login.response.body.$.accessToken}}
 
 ### Forgot password (202 with an empty body, whether or not the e-mail is registered)
 POST {{Liftingo.Api_HostAddress}}/api/v1/auth/password/forgot
