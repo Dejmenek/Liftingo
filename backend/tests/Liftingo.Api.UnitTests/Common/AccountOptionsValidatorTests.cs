@@ -110,26 +110,6 @@ public class AccountOptionsValidatorTests
         Assert.Contains("EmailTokens:PasswordResetLifetime", failure, StringComparison.Ordinal);
     }
 
-    // ExternalLogin
-
-    [Fact]
-    public void Validate_ExternalLoginPendingTimeoutPositive_Succeeds()
-    {
-        ValidateOptionsResult result = new ExternalLoginOptionsValidator()
-            .Validate(null, new ExternalLoginOptions { PendingTimeout = TimeSpan.FromMinutes(10) });
-
-        Assert.True(result.Succeeded);
-    }
-
-    [Fact]
-    public void Validate_ExternalLoginPendingTimeoutZero_FailsWithConfigPath()
-    {
-        ValidateOptionsResult result = new ExternalLoginOptionsValidator().Validate(null, new ExternalLoginOptions());
-
-        string failure = Assert.Single(result.Failures!);
-        Assert.Contains("ExternalLogin:PendingTimeout", failure, StringComparison.Ordinal);
-    }
-
     // Audit
 
     [Fact]

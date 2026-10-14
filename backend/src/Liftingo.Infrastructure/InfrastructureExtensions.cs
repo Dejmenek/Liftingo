@@ -73,7 +73,6 @@ public static class InfrastructureExtensions
         services.AddValidatedOptions<SessionsOptions, SessionsOptionsValidator>(configuration, SessionsOptions.SectionName);
         services.AddValidatedOptions<KnownDevicesOptions, KnownDevicesOptionsValidator>(configuration, KnownDevicesOptions.SectionName);
         services.AddValidatedOptions<EmailTokensOptions, EmailTokensOptionsValidator>(configuration, EmailTokensOptions.SectionName);
-        services.AddValidatedOptions<ExternalLoginOptions, ExternalLoginOptionsValidator>(configuration, ExternalLoginOptions.SectionName);
         services.AddValidatedOptions<AuditOptions, AuditOptionsValidator>(configuration, AuditOptions.SectionName);
         services.AddValidatedOptions<LegalOptions, LegalOptionsValidator>(configuration, LegalOptions.SectionName);
         services.AddValidatedOptions<AppOptions, AppOptionsValidator>(configuration, AppOptions.SectionName);
