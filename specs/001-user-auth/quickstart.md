@@ -12,9 +12,11 @@ shapes are in the contract and are not repeated here.
 - .NET 10 SDK
 - Docker Desktop (Redis for `dotnet run`; SQL Server and Redis containers for integration tests)
 - SQL Server LocalDB (for `dotnet run`)
-- Optional, for US5: developer apps at Google, Meta (Facebook) and X with redirect URIs
-  `https://localhost:<api-port>/signin-google`, `/signin-facebook`, `/signin-x`, and "Request email
-  from users" enabled on the X app
+- Optional, for US5: an OAuth client of type "Web application" at Google with
+  `https://localhost:<api-port>` as an authorized JavaScript origin, and a Meta (Facebook) app with
+  Facebook Login, "Login with the JavaScript SDK" on, and `https://localhost:<api-port>` in
+  "Allowed domains for the JavaScript SDK". No redirect URIs are needed: the client signs in at the
+  provider and posts the token (research R9).
 
 ## One-time setup
 
@@ -26,11 +28,8 @@ dotnet user-secrets --project src/Liftingo.Api set "Jwt:SigningKey" "<at least 3
 
 # optional, per provider you want to try
 dotnet user-secrets --project src/Liftingo.Api set "Authentication:Google:ClientId" "<id>"
-dotnet user-secrets --project src/Liftingo.Api set "Authentication:Google:ClientSecret" "<secret>"
 dotnet user-secrets --project src/Liftingo.Api set "Authentication:Facebook:AppId" "<id>"
 dotnet user-secrets --project src/Liftingo.Api set "Authentication:Facebook:AppSecret" "<secret>"
-dotnet user-secrets --project src/Liftingo.Api set "Authentication:X:ClientId" "<id>"
-dotnet user-secrets --project src/Liftingo.Api set "Authentication:X:ClientSecret" "<secret>"
 
 dotnet ef database update --project src/Liftingo.Infrastructure --startup-project src/Liftingo.Api
 ```
@@ -48,9 +47,9 @@ dotnet test tests/Liftingo.Api.IntegrationTests   # every slice against SQL Serv
 ```
 
 Expected: all green. Integration tests use `CapturingEmailTransport` (named `CapturingEmailSender`
-before rev. e), `CapturingAuditSink`, a fake
-external auth handler and a fake `TimeProvider`, so they need no provider credentials and test
-expiry without waiting. The exception is Identity's own lockout, which uses the system clock;
+before rev. e), `CapturingAuditSink` and a fake `TimeProvider`, so they test expiry without
+waiting. No integration test drives the provider login endpoint (research R9); manual scenarios
+8–10 cover it with real providers. The exception is Identity's own lockout, which uses the system clock;
 those tests edit `LockoutEnd` directly. Redis key TTLs are asserted directly instead of waiting 30 days.
 
 Coverage that must exist (by spec success criterion):
@@ -59,22 +58,20 @@ Coverage that must exist (by spec success criterion):
 |---|---|
 | SC-002, FR-010a | `RefreshSessionTests`: refresh resets the session TTL; a missing session key → 401; near the 90-day cap the TTL and cookie `Max-Age` are capped, and after it refresh → 401 even with daily renewals |
 | SC-003 | `LogoutTests`: refresh and bearer use both rejected after logout |
-| SC-004, FR-012 | `LoginTests`: 6th attempt → 429 with `retryAfter` 15 min ahead; after `LockoutEnd` is moved into the past in the database (Identity reads `DateTimeOffset.UtcNow`, not the fake clock), login works and the counter is 0; the unknown-e-mail throttle is driven by the fake clock; attempts during the lockout (even with the right password) are not counted and don't move `retryAfter`. `HandleExternalLoginCallbackTests` / `ConfirmProviderLinkTests`: a locked account is refused with the same retry time and the counter is unchanged |
+| SC-004, FR-012 | `LoginTests`: 6th attempt → 429 with `retryAfter` 15 min ahead; after `LockoutEnd` is moved into the past in the database (Identity reads `DateTimeOffset.UtcNow`, not the fake clock), login works and the counter is 0; the unknown-e-mail throttle is driven by the fake clock; attempts during the lockout (even with the right password) are not counted and don't move `retryAfter` |
 | SC-005 | `SecurityAuditTests` (one captured record per attempt/event, IP and device decrypt with the user's key; unknown-e-mail and failed-provider records have no user, IP or device) and `LogPrivacyTests` (no e-mail, password, token or IP in captured logs) |
 | SC-006 | `RegisterTests` etc.: the captured e-mail exists when the response returns |
-| SC-007 | `RegisterTests` and `CompleteExternalLoginTests`: missing consent → no user row; success → 3 consent rows with version |
+| SC-007 | `RegisterTests`: missing consent → no user row; success → 3 consent rows with version. Provider sign-up: manual scenario 8 |
 | SC-008 | `LoginTests` / `ForgotPasswordTests`: identical status and body for known and unknown e-mail, including lockout |
 | SC-009 | `ResetPasswordTests`: old password fails, new works, old sessions (including the caller's) rejected, no `Set-Cookie` on the reset response |
 | FR-035 (unverified) | `ResetPasswordTests`: without consents → `400 Auth.ConsentRequired`, password unchanged, token still usable; with consents → verified, old consents superseded, 3 new rows, verification tokens superseded |
 | FR-015a, FR-035 known devices | `LogoutAllDevicesTests`, `ResetPasswordTests`: `KnownDevices` rows gone; the next login from the old device sends a new-device e-mail |
 | FR-017 | `VerifyEmailTests`: second use of a token → `200 alreadyVerified`; a superseded token of an unverified account → `400` |
-| FR-022a | `HandleExternalLoginCallbackTests`: linked login returning account B's e-mail → redirect `error=emailConflict`, both accounts unchanged; an e-mail of no account → normal sign-in, e-mail unchanged |
-| FR-020 | `HandleExternalLoginCallbackTests`: provider failure → redirect `error=external`, nothing persisted, one audit record without user |
+| FR-020 (rev. f) | `FacebookTokenVerifierTests`: a token of another app, an invalid token, or a `/me` id that differs from `debug_token` → no identity. Manual scenario 8: a tampered Google token → `401 Auth.ExternalLoginFailed` |
 | FR-015c | `SessionStoreUnavailableTests`: Redis container paused → login, refresh and `GET /auth/me` return `503 Service.Unavailable` |
 | FR-040 | the existing `RateLimitingTests` (global limiter); plus one test that a signed-in auth call uses the per-user bucket (authentication runs before the limiter) |
 | FR-015b | `LogoutTests`, `LogoutAllDevicesTests`, `ResetPasswordTests`, `RefreshSessionTests` (reuse): an unexpired access token of the revoked session gets `401` on `GET /auth/me` |
-| FR-022 takeover | `CompleteExternalLoginTests`: unverified match → consent step required; afterwards old consents have `SupersededAt`, 3 new rows exist, old password and sessions fail. Cancel at the consent step → account unchanged |
-| FR-023a | `CompleteExternalLoginTests` (typed e-mail of an existing account → `202`, token holds provider + key, no user or login added) and `ConfirmProviderLinkTests` (link, `ConsentRequired` keeps the token, takeover on unverified, `ProviderAlreadyLinked`, limit of 3 per hour) |
+| FR-022, FR-022a, FR-023a | manual scenarios 9 and 10 (no integration tests, research R9) |
 | SC-010 (backend part) | `RegisterTests` / `LoginTests`: token only in the body; `Set-Cookie` has `HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/api/v1/auth/session`. The browser-side check belongs to the frontend feature. |
 | US-18 groundwork | `AuditEncryptionTests`: after the user row is deleted, the key row is gone and the captured records can no longer be decrypted |
 | FR-013 (rev. e) | `RedisLoginThrottleTests`: the rules of R8 against the Redis container (no count during lockout, no decay, reset on trigger, entry expires only after the lockout). `LoginTests`: an unknown address locked out through one `ApiFactory` is still locked, with the same retry time, through a second `ApiFactory` on the same Redis (restart or second instance) |
@@ -131,23 +128,28 @@ into the matching API request.
    hour → three e-mails. On an **unverified** account: reset without consents → `400
    Auth.ConsentRequired`; resend with both consents → `204`, and `GET /auth/me` after login shows
    `emailVerified: true`.
-8. **External provider (US5, US7-2)**: with Google configured, open
-   `https://localhost:<port>/api/v1/auth/external/google/start?deviceId=<uuid>` in a browser. A
-   new address redirects to `{Frontend}/auth/consent` (the page will 404 until the frontend
-   exists; that's expected). From the same browser session call `GET /auth/external/pending`, then
-   `POST /auth/external/cancel` → nothing in `AspNetUsers`. Repeat and `complete` instead →
-   account created, verified, one welcome-only e-mail. Starting again with Google → redirect to
-   `/auth/callback` with a refresh cookie set, no consent step.
+Scenarios 8–10 use the development-only page `https://localhost:<port>/dev/provider-sign-in`
+(served only when `ASPNETCORE_ENVIRONMENT=Development`). It reads the configured providers, shows
+the Google button and a Facebook button, keeps the last provider token in memory, and posts it to
+`POST /api/v1/auth/external/{provider}/login` with the consent boxes and e-mail field as they are
+ticked and filled. "Send again" resends the same token. Every response is printed on the page.
+
+8. **External provider (US5, US7-2)**: with Google configured and no account for your Google
+   address, sign in with Google with the consent boxes unticked → `400 Auth.ConsentRequired`
+   (`accountExists: false`), nothing in `AspNetUsers`. Tick both required boxes and "Send again"
+   → `201`, account verified, one welcome-only e-mail, no new-device e-mail. Sign in with Google
+   again with the boxes unticked → `200`, no consents asked. Edit one character of the token in
+   the page's token field and send → `401 Auth.ExternalLoginFailed` and one `[AUDIT]` line without
+   user. Repeat with Facebook if configured.
 9. **Pre-hijack protection (FR-022)**: register with e-mail/password using your Google address
-   without verifying, then sign in with Google using that address. Expect a redirect to
-   `/auth/consent`, and `GET /auth/external/pending` → `accountExists: true`. `cancel` → nothing
-   changed, the password still works. Repeat and `complete` with both consents → `200`; linked,
-   verified, the password no longer works, the first session is revoked, the old consent rows are
-   superseded and three new ones exist.
-10. **Typed-in e-mail of an existing account (FR-023a)**: needs a provider that returns no e-mail
-    (with real providers, use a Facebook account registered by phone; otherwise rely on
-    `ConfirmProviderLinkTests`). At the consent step, enter the e-mail of an existing account →
-    `202 linkConfirmationSent` and a link-confirmation e-mail in the console. Post the token to
+   without verifying, then sign in with Google on the page with the boxes unticked →
+   `400 Auth.ConsentRequired` with `accountExists: true`; the password still works. Tick both and
+   "Send again" → `200`; linked, verified, the password no longer works, the first session is
+   revoked, the old consent rows are superseded and three new ones exist.
+10. **Typed-in e-mail of an existing account (FR-023a)**: needs a Facebook account registered by
+    phone (no e-mail). Sign in with Facebook → `400 Auth.ConsentRequired` with
+    `emailRequired: true`. Tick both boxes, type the e-mail of an existing account and "Send again"
+    → `202 linkConfirmationSent` and a link-confirmation e-mail in the console. Post the token to
     `/auth/external/confirm-link` → `200`, signed in, provider listed in `account.providers`.
 
 11. **Performance (SC-011)**: with any HTTP load tool against a local Release run with Redis and

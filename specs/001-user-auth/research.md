@@ -36,6 +36,14 @@ port that takes one record per e-mail, and e-mail times use a configured display
 checked at startup (R24, replaces the template part of R11). Application's package list is
 enforced by architecture tests (R25).
 
+**Revision 2026-10-14 (f)**: follows the fourth clarification session. Provider sign-in switches
+from server-side redirects to a credential the client gets from the provider and posts to the API
+(R9). Consents can arrive with that request or with a repeat of it, so no pending sign-in is kept
+between requests (R10). Twitter (X) is deferred. Five external endpoints become one
+(`POST /auth/external/{provider}/login`); the `Liftingo.External` cookie scheme, the provider
+handler packages, `FrontendRedirects` and `ExternalLogin:PendingTimeout` are removed (R19, R20,
+R22).
+
 ---
 
 ## R1. How Application slices use ASP.NET Core Identity
@@ -159,10 +167,9 @@ session + device + audit) would not be atomic.
   `logout`, `logout-all`) live under that path, so the browser sends it nowhere else (FR-008a). The
   access token is returned in the JSON body; keeping it in memory only is the client's job (R16).
   On start the client calls `refresh` to get one.
-- **Why `Lax`** (FR-008a, decided in review): the external callback (R9) sets the cookie on the
-  response to a redirect chain that started at the provider, a cross-site navigation. `Lax` is the
-  mode that browsers reliably accept and send in that flow; `Strict` adds nothing here because
-  every cookie endpoint is POST-only and `Lax` never attaches cookies to cross-site POSTs.
+- **Why `Lax`** (FR-008a, decided in review): `Strict` adds nothing here because every cookie
+  endpoint is POST-only and `Lax` never attaches cookies to cross-site POSTs. Rev. a–e also needed
+  `Lax` for the provider redirect chain, which rev. f removed.
 - **Same-site requirement**: `SameSite` cookies are only sent on XHR when the SPA and the API are
   on the same site. The later frontend will use a dev-server proxy for `/api` (same origin). In
   production the API must be on a subdomain of the frontend's registrable domain (e.g.
@@ -177,15 +184,14 @@ session + device + audit) would not be atomic.
 
 - **Decision**: the client generates a UUID once and keeps it in `localStorage`
   (`liftingo.deviceId`). It is not a credential. It is sent as header `X-Device-Id` on register,
-  login, external completion and link confirmation, and as a query parameter on the external challenge (a top-level
-  navigation cannot carry headers). The server derives the device type from `User-Agent` with a
+  login, provider login and link confirmation. The server derives the device type from `User-Agent` with a
   small built-in classifier (`DeviceDescriptor`: form factor + browser family + OS family, e.g.
   "Chrome, Windows, komputer"). A missing or malformed id is replaced with a fresh server-side
   UUID, so the sign-in counts as a new device.
 - `KnownDevice(UserId, DeviceId)` is unique. A sign-in (FR-026) is a successful password login,
   provider sign-in into an existing account, or confirmed provider link (R17). On a sign-in, an
   unknown pair is inserted and the new-device e-mail sent; a known pair gets `LastSeenAt` updated.
-  Every way of creating an account (register, `complete` for a new user) inserts the first device
+  Every way of creating an account (register, a provider login that creates one) inserts the first device
   without an e-mail (US7-6). Refresh never touches `KnownDevice`. Failed attempts never insert
   (US7-5).
 - **Clearing**: "sign out of all devices" (FR-015a) and a completed password reset (FR-035) delete
@@ -277,9 +283,9 @@ whether the e-mail is registered. A lockout message shown only for real accounts
     not `TimeProvider` (v10.0.1 source). A `FakeTimeProvider` therefore cannot end an Identity
     lockout in tests. Lockout-expiry tests move `LockoutEnd` into the past through the database
     instead; `FailedLoginThrottle` takes `TimeProvider` and is tested with the fake clock.
-  - **Provider sign-in on a locked account** (FR-012): the callback (R9), `complete` (R10) and
+  - **Provider sign-in on a locked account** (FR-012): the provider login (R10) and
     `confirm-link` (R17) check `IsLockedOutAsync` on the matched account before signing in and
-    refuse with the same retry time. These refusals and cancelled provider sign-ins never call
+    refuse with the same retry time. These refusals and failed provider credentials never call
     `AccessFailedAsync`.
 - **Limitation** (superseded in rev. e): the memory throttle resets on restart and is per
   instance. The clarification of 2026-10-13 (FR-013) does not accept that; the throttle moves to
@@ -289,79 +295,99 @@ whether the e-mail is registered. A lockout message shown only for real accounts
 - **Audit**: unknown-e-mail attempts are audited with `UserId = null` and no IP or device type
   (FR-014, R14); the e-mail itself is never stored or logged.
 
-## R9. External providers
+## R9. External providers (rev. f)
 
-- **Packages**: `Microsoft.AspNetCore.Authentication.Google` and
-  `Microsoft.AspNetCore.Authentication.Facebook` (10.0.x, same train as the other ASP.NET packages),
-  and `AspNet.Security.OAuth.Twitter` 10.0.0 (aspnet-contrib, OAuth 2.0 + PKCE). The Microsoft
-  Twitter handler was rejected because it uses OAuth 1.0a.
-- **X e-mail**: X returns only verified addresses (confirmed in review, spec Assumptions), as
-  `confirmed_email` from `GET /2/users/me`, when the app has "Request email from users" enabled and
-  requests scope `users.email`. The package does **not** do this by default (checked against its
-  source: default scopes are `tweet.read` and `users.read`, `UserFields` is empty, and only
-  `id`, `username` and `name` are mapped). Three lines of handler configuration fix it:
-  `Scope.Add("users.email")`, `UserFields.Add("confirmed_email")` (sent as `user.fields`), and
-  `ClaimActions.MapJsonSubKey(ClaimTypes.Email, "data", "confirmed_email")`. No
-  `OnCreatingTicket` code is needed. A `HandleExternalLoginCallbackTests` case can't cover this
-  (the fake handler skips X), so `ExternalProviderOptions` gets a unit test asserting the scope,
-  field and claim action are registered.
-- **Flow** (server-side redirect, no provider SDKs in the browser):
-  1. SPA does a full-page navigation to
-     `GET /api/v1/auth/external/{provider}/start?deviceId=…`.
-  2. The handler challenges the provider with `RedirectUri = /api/v1/auth/external/callback` and
-     the device id in `AuthenticationProperties`. Provider callback paths are the handlers' own
-     (`/signin-google`, `/signin-facebook`, `/signin-x`).
-  3. The provider handler signs the result into a short-lived encrypted cookie scheme
-     `Liftingo.External` (`HttpOnly`, `SameSite=Lax`, 10 min).
-  4. `callback` reads it. Existing login → issue session, set refresh cookie, delete external
-     cookie, redirect to `{Frontend}/auth/callback`. E-mail matches an existing account → link
-     (with pre-hijacking protection, R10), sign in, redirect the same way. New user → redirect to
-     `{Frontend}/auth/consent`; nothing is written to the database. Refusals, all with the external
-     cookie deleted and nothing written:
-     - matched account locked out (FR-012) → `{Frontend}/login?error=lockedOut&retryAfter=<ISO>`;
-     - existing login, but the provider e-mail belongs to a **different** account (FR-022a) →
-       `{Frontend}/login?error=emailConflict`, audit `ExternalLogin` `Failed` for the linked user.
-       A provider e-mail that belongs to nobody is ignored; the linked account's e-mail never
-       changes;
-     - provider error, user cancelled, or the external ticket fails to validate (FR-020) →
-       `{Frontend}/login?error=external`, audit `ExternalLogin` `Failed` with no user, IP or device.
-  5. The consent page reads `GET /auth/external/pending` (provider name, e-mail if any) and posts
-     `POST /auth/external/complete` (consents, optional e-mail). Only now is the account created.
-     `POST /auth/external/cancel` or the 10-minute expiry (`ExternalLogin:PendingTimeout`) drops the
-     cookie and all provider data (FR-021, US5-2, US5-9).
-- **Unconfigured providers**: a provider is registered only when its `ClientId` and `ClientSecret`
-  are present. `GET /auth/external/providers` lists the registered ones and the UI shows only those.
-- **Alternatives**: browser SDKs + token exchange endpoint (three SDKs, three token validators);
-  creating the account at the callback and deleting it on decline (violates FR-021).
+- **Flow** (client-supplied credential, no redirects through the API):
+  1. The client signs in at the provider with the provider's own script and gets a credential:
+     a Google **ID token** (Google Identity Services) or a Facebook **access token** (Facebook
+     JavaScript SDK, scope `email`).
+  2. It posts `POST /api/v1/auth/external/{provider}/login` with `{ token, acceptTermsAndAge?,
+     acceptHealthData?, acceptMarketing?, email? }`
+     and `X-Device-Id`.
+  3. The `ExternalLogin` handler resolves the provider in `IExternalProviderCatalog` (`404
+     Auth.ProviderUnavailable` if not configured) and calls the `IExternalIdentityVerifier` port.
+     A credential that fails verification is audited as `ExternalLogin` `Failed` without user, IP
+     or device, and answered `401 Auth.ExternalLoginFailed`. Then the account rules of R10 apply.
+- **Google** (`GoogleIdTokenVerifier`, package `Google.Apis.Auth`):
+  `GoogleJsonWebSignature.ValidateAsync(token, new ValidationSettings { Audience = [ClientId] })`
+  checks the signature against Google's cached keys, the issuer and the expiry. `Audience` MUST be
+  set: without it any Google ID token, including one issued to another application, would be
+  accepted. The library does not enforce `email_verified`; a payload with `EmailVerified = false`
+  is treated as "no e-mail" (FR-023 then asks for one) rather than refused. `ProviderKey` = `sub`.
+  Only `ClientId` is configured: checking an ID token needs no secret.
+- **Facebook** (`FacebookTokenVerifier`, typed `HttpClient`, no SDK):
+  1. `GET https://graph.facebook.com/{version}/debug_token?input_token={token}&access_token={AppId}|{AppSecret}`;
+     require `data.is_valid == true` and `data.app_id == AppId`. The app-id check is what stops a
+     token issued to another Facebook app from signing in here.
+  2. `GET /{version}/me?fields=id,name,email&access_token={token}&appsecret_proof={hex HMAC-SHA256(token, AppSecret)}`;
+     require `id == data.user_id`. `email` is missing for accounts registered by phone (FR-023).
 
-## R10. Linking by e-mail and pre-hijacking protection
+  A non-success status or a network error counts as a failed verification and is logged as a
+  warning naming only the provider. `Authentication:Facebook:GraphApiVersion` defaults to `v26.0`
+  (current in October 2026).
+- **Port**: `Application/Common/Security/IExternalIdentityVerifier.VerifyAsync(loginProvider, token, ct)`
+  returns `ExternalIdentity(Provider, ProviderKey, Email?, DisplayName?)` or `null`. Infrastructure
+  registers a verifier per configured provider behind it. Application never sees provider HTTP or
+  token formats (constitution Principle I).
+- **Unconfigured providers**: a provider is registered only when its keys are present
+  (`Authentication:Google:ClientId`; `Authentication:Facebook:AppId` and `AppSecret`).
+  `GET /auth/external/providers` lists the registered ones with their public client id, which the
+  client needs to start the provider's sign-in.
+- **No server state between requests**: both credentials stay valid for at least an hour, so when
+  the API answers "consents required" the client sends the same token again with them (R10). No
+  cookie, no pending record, no `ExternalLogin:PendingTimeout`.
+- **Replay**: a stolen ID or access token could sign its owner in until it expires. Taking it needs
+  script access in the user's browser, which already exposes the in-memory access token. A
+  server-issued nonce was considered and left out (extra round trip and short-lived state).
+- **Twitter (X)**: deferred (spec clarification 2026-10-14). X has no ID token; its OAuth 2.0 code
+  must be exchanged with the client secret, which needs a different request shape.
+- **Testing**: no integration tests drive this endpoint (decided 2026-10-14); a fake verifier
+  would only test the fake. The Facebook verifier's app-id and user-id checks are unit-tested
+  against a stubbed `HttpMessageHandler`, and a development-only page (quickstart) runs the real
+  provider sign-ins by hand.
+- **Alternatives**: server-side redirect handlers with a temporary `Liftingo.External` cookie
+  (rev. a–e; replaced: three handler packages, a cookie scheme, five endpoints, and a redirect to
+  the frontend for every outcome); a pending token returned with "consents required" (not needed
+  once X is out, because both remaining credentials can be sent twice).
 
-- **Decision** (FR-022): at callback, if no login matches but the provider e-mail matches an
-  account:
-  - account verified → add the login, audit `ProviderLinked`, sign in. No consent step: the
-    account's consents were given by someone who proved the address.
-  - account unverified (**takeover**) → write nothing yet. Keep the provider data in the
-    `Liftingo.External` cookie and redirect to `{Frontend}/auth/consent`, exactly like a new user.
-    `GET /auth/external/pending` returns `accountExists: true` so the page can explain why the
-    consents are asked again. `POST /auth/external/complete` then, in one `SaveChangesAsync`: adds
-    the login, sets `EmailConfirmed = true`, removes the password, marks every current
-    `UserConsent` row superseded and inserts three new ones, and supersedes open e-mail tokens.
-    After the commit it revokes all sessions in Redis (pre-hijacker loses access), audits
-    `ProviderLinked` and signs the owner in.
-- **Why defer the takeover until consent**: if the owner walks away at the interstitial, nothing
-  has changed and no provider data is kept (FR-021). Doing the takeover at callback and asking for
-  consent afterwards could leave a verified account whose only consents were given by someone
-  else, which constitution III does not allow. The cost is that the unverified account keeps working
-  for its holder until the owner completes the step. The 7-day unverified-account deletion
-  (out of scope) bounds that.
+## R10. Linking by e-mail and pre-hijacking protection (rev. f)
+
+- **Decision** (FR-021, FR-022), applied by `ExternalLogin` after the credential is verified:
+
+  | Situation | Required consents not both `true` | Both required consents `true` |
+  |---|---|---|
+  | Login `(provider, key)` already linked | sign in | sign in, consents ignored |
+  | Linked, but the provider e-mail belongs to another account (FR-022a) | `409 Auth.ProviderEmailConflict` | same |
+  | Provider e-mail matches a **verified** account | add the login, audit `ProviderLinked`, sign in | same, consents ignored |
+  | Provider e-mail matches an **unverified** account (takeover) | `400 Auth.ConsentRequired`, `accountExists: true` | takeover (below), sign in |
+  | No account, provider gave an e-mail | `400 Auth.ConsentRequired` | create the account, `EmailConfirmed = true`, welcome-only e-mail |
+  | No account, provider gave no e-mail | `400 Auth.ConsentRequired`, `emailRequired: true` | with `email`: a new address creates an unverified account with the verification+welcome e-mail, an existing one goes to R17; without `email`: `400 Validation.EmailRequired` |
+
+  A matched account that is locked out (FR-012) refuses with `429 Auth.LockedOut` before anything
+  is written, in every row that signs in.
+- **Takeover**: in one `SaveChangesAsync`: add the login, set `EmailConfirmed = true`, remove the
+  password, mark every current `UserConsent` row superseded and insert three new ones, supersede
+  open e-mail tokens. After the commit: revoke all sessions in Redis (the pre-hijacker loses
+  access), audit `ProviderLinked`, sign the owner in.
+- **Why consents before the takeover**: if the owner walks away at the consent step, nothing has
+  changed and no provider data is kept (FR-021). Taking over first and asking afterwards could
+  leave a verified account whose only consents were given by someone else, which constitution III
+  does not allow. The unverified account keeps working for its holder until the owner completes
+  the step; the 7-day unverified-account deletion (out of scope) bounds that.
+- **Consents sent with a plain sign-in** are ignored, not recorded. The account already has its
+  own, and recording them would add consent history the user did not knowingly change.
+- **Consent fields** are nullable, as in `confirm-link` (R17): `acceptTermsAndAge`,
+  `acceptHealthData`, `acceptMarketing`. A required one that is missing or `false` counts as
+  not given, so the answer is `Auth.ConsentRequired`, never a field error. Marketing defaults to
+  `false` (FR-004).
 - **Superseded consents**: rows stay (append-only history, provable), with `SupersededAt` set.
   "Current consents" = rows with `SupersededAt IS NULL`. Account data is kept.
 - **Shared helper**: `Features/Account/Shared/AccountTakeover.cs` is used by three slices:
-  `CompleteExternalLogin`, `ConfirmProviderLink` (both remove the password) and `ResetPassword`
-  (keeps the new password, R7).
-- Provider-supplied e-mails are always treated as verified (spec assumption). An e-mail the user
-  types on the consent page (FR-023) is not: a new address gets the normal verification e-mail; an
-  address that already has an account goes through R17.
+  `ExternalLogin`, `ConfirmProviderLink` (both remove the password) and `ResetPassword` (keeps the
+  new password, R7).
+- Provider-supplied e-mails are treated as verified (spec assumption). An e-mail the user types
+  (FR-023) is not: a new address gets the normal verification e-mail; an address that already has
+  an account goes through R17.
 
 ## R11. E-mail sending abstraction and development output
 
@@ -460,8 +486,7 @@ whether the e-mail is registered. A lockout message shown only for real accounts
   app with the user's key. Ingestion latency (minutes) is fine for an export.
 - **Data Protection keys must be durable**: if the Data Protection key ring is lost, every wrapped
   audit key is lost with it. This feature persists the key ring to SQL Server with
-  `Microsoft.AspNetCore.DataProtection.EntityFrameworkCore` (`PersistKeysToDbContext`). The same
-  persistence keeps the external-login cookie (R9) readable across restarts.
+  `Microsoft.AspNetCore.DataProtection.EntityFrameworkCore` (`PersistKeysToDbContext`).
 - **Write order**: `WriteAsync` runs after the handler's SQL commit, as a separate step. A sink
   failure is caught and logged (event type and user id only) and never fails the request. The
   sinks in this feature (console, test capture) do no network I/O, so in practice every event is
@@ -487,8 +512,8 @@ whether the e-mail is registered. A lockout message shown only for real accounts
   (which is never registered in `Testing`). As a safety net, `Serilog.Enrichers.Sensitive` masks
   e-mail addresses (built-in operator) and IP addresses (a custom `RegexMaskingOperator`) in the
   properties and rendered message of every log event, the development e-mail output included.
-  It is configured in code, so configuration cannot turn it off. Identity's own log messages use user ids. *Verify* the
-  external handlers' log output does not include e-mail at `Information` level and above.
+  It is configured in code, so configuration cannot turn it off. Identity's own log messages use user ids. Provider
+  credentials are never logged; the verifiers log only the provider name on failure.
 
 ## R16. Client expectations (frontend is a later feature)
 
@@ -499,8 +524,7 @@ assumes the following client behaviour, and the frontend feature must implement 
   `sessionStorage` or a readable cookie (FR-008a, SC-010). SC-010 is verified in the frontend
   feature; the backend proves its part with tests on the `Set-Cookie` attributes.
 - Generate a device id once, keep it in `localStorage` (`liftingo.deviceId`), and send it as
-  `X-Device-Id` on register, login, external completion and link confirmation, and as `deviceId` on the external
-  start URL (R6).
+  `X-Device-Id` on register, login, provider login and link confirmation (R6).
 - On start, call `POST /auth/session/refresh` to get an access token. Call it again right after a
   successful e-mail verification so the `email_verified` claim updates (FR-019).
 - Serialise refresh calls across tabs with the Web Locks API (R4), refresh once on a 401, and retry
@@ -512,8 +536,11 @@ assumes the following client behaviour, and the frontend feature must implement 
   keeps working (Principle V).
 - Serve the SPA and API from the same site (dev proxy locally), so the `SameSite=Lax` cookie is
   sent (R5).
-- Handle the external redirects `/auth/callback`, `/auth/consent` and
-  `/login?error=external|lockedOut|emailConflict`
+- Sign in at Google (Google Identity Services, client id from `GET /auth/external/providers`) or
+  Facebook (JavaScript SDK, scope `email`) and post the credential to
+  `POST /auth/external/{provider}/login`. Show the consents first on the registration page and
+  send them along; from the login page send none, and on `400 Auth.ConsentRequired` show them
+  (with an e-mail field when `emailRequired`) and resend the same credential with them
   ([contract](contracts/auth-api.md#external-providers)).
 - Provide pages for the link-confirmation e-mail (R17) and the password-reset e-mail (R7) that
   show the consent form when the API answers `Auth.ConsentRequired`, and resubmit with the
@@ -524,17 +551,17 @@ Angular workspace exists, the "regenerate after endpoint change" rule has nothin
 
 ## R17. Typed-in e-mail that already has an account (FR-023a)
 
-A provider returned no e-mail, and the address the user typed on the consent page belongs to an
+A provider returned no e-mail, and the address the user typed with the consents belongs to an
 existing account. Linking immediately would let anyone with a provider account take over any
 Liftingo account by typing its address.
 
-- **Decision**: `POST /auth/external/complete` detects the match and, instead of creating or
+- **Decision**: `POST /auth/external/{provider}/login` detects the match and, instead of creating or
   linking anything:
   1. issues an `EmailToken` with purpose `ProviderLinkConfirmation` for the existing account,
      holding `LoginProvider` and `ProviderKey` (nothing else from the provider), lifetime
      `EmailTokens:ProviderLinkLifetime` (24 h), subject to the supersede rule and FR-037's limit;
   2. sends the link-confirmation e-mail (fifth template in `AccountEmails`) to the address;
-  3. deletes the `Liftingo.External` cookie and returns `202` with
+  3. returns `202` with
      `{ "status": "linkConfirmationSent" }`. At the limit it returns the same `202` and sends
      nothing.
 
@@ -553,8 +580,8 @@ Liftingo account by typing its address.
      the commit); consume the token; audit `ProviderLinked`; sign in on this device (`200` +
      `AuthSession` + cookie). Known-device and new-device e-mail rules are those of a normal
      sign-in (R6).
-- **Why the token carries the provider key**: the external cookie lives 10 minutes in the browser
-  that ran the provider flow, but the e-mail may be opened hours later on another device.
+- **Why the token carries the provider key**: the provider credential is short-lived and stays in
+  the browser that signed in, but the e-mail may be opened hours later on another device.
 - **Response differs from a new address** (`201` signed in vs. `202` check inbox). This reveals
   that the address has an account. Accepted in the spec (FR-023a) because `POST /auth/register`
   already reveals it with `409 Auth.EmailTaken` (US1-4), and SC-008 covers login and reset only.
@@ -616,19 +643,15 @@ Today 33 Application files import ASP.NET Core or `IMemoryCache`.
   | `Common/Routes/IEndpoint.cs`, `RouteConsts.cs` | `Endpoints/IEndpoint.cs`, `Endpoints/RouteConsts.cs` | nothing |
   | `Common/Result/ResultExtensions.cs` (`ToProblem`, `RetryAfterProblemResult`) | `Http/ResultExtensions.cs` | `Result<T>`; `LockedOutError` and `ErrorType` stay in Application |
   | `Shared/RefreshTokenCookie.cs` (read, append, delete) | `Endpoints/Account/Shared/RefreshTokenCookie.cs` | input: `string? RefreshToken` on the command; output: `IssuedSession` (R22) |
-  | `Shared/ClientInfo.From(HttpContext)` | `Endpoints/Account/Shared/ClientInfoReader.cs` | `ClientInfo` stays in Application with a pure factory `ClientInfo.Create(ip, userAgent, deviceIdHeader, deviceIdOverride)`, so the R6 parsing rules and `DeviceDescriptor` stay unit-tested where they are |
-  | `Shared/PendingExternalLogin.ReadAsync/ClearAsync` (auth cookie) | `Endpoints/Account/Shared/ExternalLoginCookie.cs` | input: `ExternalIdentity?` record (provider, key, e-mail, display name, device id) |
-  | `Shared/FrontendRedirects.cs` | `Endpoints/Account/Shared/FrontendRedirects.cs` | callback outcome or error code (R22) |
+  | `Shared/ClientInfo.From(HttpContext)` | `Endpoints/Account/Shared/ClientInfoReader.cs` | `ClientInfo` stays in Application with a pure factory `ClientInfo.Create(ip, userAgent, deviceIdHeader)`, so the R6 parsing rules and `DeviceDescriptor` stay unit-tested where they are |
+  | `Shared/PendingExternalLogin.ReadAsync/ClearAsync` (auth cookie) | removed in rev. f (R9) | |
+  | `Shared/FrontendRedirects.cs` | removed in rev. f (R9) | |
   | `SessionsOptions.CookiePath` | `RefreshCookieOptions.Path` in Api, set from the version prefix | `SessionsOptions` keeps the two lifetimes |
   | `Infrastructure/Identity/UserContext.cs` (`IHttpContextAccessor`) | `Api/Security/UserContext.cs` | `IUserContext` port unchanged |
 
-- `AppOptions.FrontendBaseUrl` is needed by two outer layers: Infrastructure builds e-mail links
-  (R24) and `Api` builds redirects. It moves to `Application/Common/Configuration/AppOptions.cs`
+- `AppOptions.FrontendBaseUrl` is needed by Infrastructure to build e-mail links (R24). It moves to `Application/Common/Configuration/AppOptions.cs`
   and is validated once at startup. It is a plain options class, so Application gains no
   dependency.
-- **CancelExternalLogin** becomes an `Api`-only endpoint. It deletes the external cookie and
-  nothing else: no data, no rule, no audit. Wrapping that in a command would be a slice with an
-  empty handler.
 - **Alternatives**: an `IHttpResponseWriter` port that handlers call to set cookies (keeps HTTP
   semantics in the handler under another name); an `ICurrentClient` port for `ClientInfo` (hides a
   real input of the use case and gives jobs a port they can't fill). Both were rejected.
@@ -641,20 +664,15 @@ scheme and path constants (`AuthenticationSchemes`, `ExternalLoginPaths`) sit in
 because both layers need them.
 
 - **Decision**: `Api/Extensions/AuthenticationExtensions.cs` calls `AddAuthentication`, registers
-  the JWT bearer scheme and the `Liftingo.External` cookie scheme, and sets the authorization
-  defaults. Infrastructure contributes only configuration, through two extension points that Api
-  calls during wiring:
-  - `AuthenticationBuilder.AddExternalProviders(configuration, signInScheme, callbackPath)` adds
-    the Google, Facebook and X handlers with the R9 configuration (only the configured ones);
-  - an `IConfigureNamedOptions<JwtBearerOptions>` in Infrastructure sets the signing key,
-    issuer and audience from `JwtOptions` and hooks `SessionValidation` into `OnTokenValidated`.
-  The constants move to `Api/Security/AuthenticationSchemes.cs` and are passed to Infrastructure
-  as arguments, so Application has no HTTP constants left.
+  the JWT bearer scheme, and sets the authorization defaults. Infrastructure contributes the
+  `IConfigureNamedOptions<JwtBearerOptions>` that sets the signing key, issuer and audience from
+  `JwtOptions` and hooks `SessionValidation` into `OnTokenValidated`. Since rev. f there are no
+  provider schemes: the provider verifiers (R9) are plain Infrastructure services registered by
+  `AddInfrastructure`.
 - **Rationale**: Api decides which schemes exist and how requests are authenticated; Infrastructure
   owns everything that talks to Identity, providers or token signing. Calling an Infrastructure
   extension method from `Program`/`Extensions` is DI wiring, which Principle I allows.
-- **Alternatives**: leave registration in Infrastructure (breaks Principle I's split); move the
-  provider handlers to Api too (puts Identity-specific claim mapping, R9, in the HTTP layer).
+- **Alternatives**: leave registration in Infrastructure (breaks Principle I's split).
 
 ## R21. Unknown-e-mail lockout in Redis (rev. e, FR-013)
 
@@ -688,7 +706,7 @@ live in the shared session store, never in process memory.
 
 ## R22. Account slices as commands and queries (rev. e)
 
-- **Decision**: 17 endpoints map to 16 slices under `Application/Features/Account/{UseCase}/`, one
+- **Decision**: 13 endpoints map to 13 slices (17 and 16 before rev. f) under `Application/Features/Account/{UseCase}/`, one
   type per file (`{UseCase}Command`/`Query`, `…CommandHandler`/`QueryHandler`,
   `…CommandValidator` where the input has rules, `{UseCase}Response`):
 
@@ -705,33 +723,27 @@ live in the shared session store, never in process memory.
   | `POST /auth/password/forgot` | `ForgotPassword` | command | yes |
   | `POST /auth/password/reset` | `ResetPassword` | command | yes |
   | `GET /auth/external/providers` | `GetExternalProviders` | query | no |
-  | `GET /auth/external/{provider}/start` | `StartExternalLogin` | query (resolves the scheme; Api issues the challenge) | no |
-  | `GET /auth/external/callback` | `HandleExternalLoginCallback` | command | no |
-  | `GET /auth/external/pending` | `GetPendingExternalLogin` | query | no |
-  | `POST /auth/external/complete` | `CompleteExternalLogin` | command | yes |
+  | `POST /auth/external/{provider}/login` | `ExternalLogin` | command | yes |
   | `POST /auth/external/confirm-link` | `ConfirmProviderLink` | command | yes |
-  | `POST /auth/external/cancel` | none, Api-only (R19) | | |
 
   The validator column follows the validators that exist today; the implementation keeps any
   validator a slice already has.
 - **Inputs from HTTP**: a command carries what Api read from the request: `ClientInfo Client`,
-  `string? RefreshToken`, `ExternalIdentity? External`. The signed-in user comes from
+  `string? RefreshToken`. The signed-in user comes from
   `IUserContext`, as today.
 - **Sessions in the output**: `SessionIssuer.IssueAsync` returns
   `IssuedSession(AccessToken, AccessTokenExpiresAt, AccountSummary Account, RefreshToken,
   RefreshTokenLifetime)` instead of writing the cookie. Every signing-in response
-  (`RegisterResponse`, `LoginResponse`, `RefreshSessionResponse`, `CompleteExternalLoginResponse`,
+  (`RegisterResponse`, `LoginResponse`, `RefreshSessionResponse`, `ExternalLoginResponse`,
   `ConfirmProviderLinkResponse`) holds an `IssuedSession`. Api writes the cookie and returns the
   unchanged `AuthSessionResponse` body. That body type lives in `Api/Endpoints/Account/Shared/`:
   it is the HTTP contract several endpoints share (contract unchanged), not an Application
   response, so the "response DTOs are not shared" rule holds.
-- **Callback outcomes**: `HandleExternalLoginCallbackResponse(Outcome, IssuedSession?)` with
-  `Outcome` = `SignedIn` | `ConsentRequired`. Refusals are `Result` errors: `LockedOutError` and
-  two new codes in `ExternalLoginErrors`, `Auth.ExternalLoginFailed` and
-  `Auth.ProviderEmailConflict`. They never reach a client as a problem body, because the callback
-  always redirects. The endpoint maps
-  each code to the redirect in the contract's callback table and deletes the external cookie for
-  everything except `ConsentRequired`.
+- **Provider login outcomes** (rev. f): `ExternalLoginResponse(Outcome, IssuedSession?)` with
+  `Outcome` = `AccountCreated` | `SignedIn` | `LinkConfirmationSent`. Refusals are `Result` errors
+  returned as problem bodies: `LockedOutError`, `ConsentRequiredError` (carries `accountExists`
+  and `emailRequired`, which Api adds as extensions), and the `ExternalLoginErrors` codes
+  `Auth.ExternalLoginFailed`, `Auth.ProviderEmailConflict` and `Auth.ProviderUnavailable`.
 - **Cookie deletion**: decided by the endpoint from the result: logout and logout-all always
   delete the refresh cookie; refresh deletes it on any failure; reset deletes it on success.
 - **Shared helpers** stay in `Features/Account/Shared/` as concrete classes the handlers call

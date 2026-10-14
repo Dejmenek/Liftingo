@@ -82,7 +82,7 @@ AccountSummary(Guid Id, string Email, bool EmailVerified, bool HasPassword,
 
 ### AspNetUserLogins (existing, Identity)
 
-External login link: `LoginProvider` (`Google` | `Facebook` | `X`), `ProviderKey` (provider's
+External login link: `LoginProvider` (`Google` | `Facebook`), `ProviderKey` (provider's
 user id), `ProviderDisplayName`, `UserId`. Primary key `(LoginProvider, ProviderKey)`. No change.
 
 ### UserConsent
@@ -127,7 +127,7 @@ Rules:
 
 - Unique `(UserId, DeviceId)`.
 - Inserted on the device used at registration **without** a new-device e-mail.
-- Inserted on the first device of every new account (e-mail registration or provider `complete`)
+- Inserted on the first device of every new account (e-mail registration or a provider login that creates the account)
   **without** a new-device e-mail.
 - Inserted on a successful sign-in from an unknown device **with** a new-device e-mail (FR-026).
   Sign-in = password login, provider sign-in into an existing account, confirmed provider link
@@ -152,7 +152,7 @@ Rules:
 | `ExpiresAt` | `DateTimeOffset` | +24 h (verification) / +1 h (reset) / +24 h (link confirmation) |
 | `ConsumedAt` | `DateTimeOffset?` | |
 | `SupersededAt` | `DateTimeOffset?` | |
-| `LoginProvider` | `string(32)?` | `ProviderLinkConfirmation` only: `Google` / `Facebook` / `X` |
+| `LoginProvider` | `string(32)?` | `ProviderLinkConfirmation` only: `Google` / `Facebook` |
 | `ProviderKey` | `string(256)?` | `ProviderLinkConfirmation` only: provider's user id |
 
 Check constraint: `LoginProvider` and `ProviderKey` are both non-null exactly when
@@ -214,7 +214,7 @@ Rules:
 
 Table created by `Microsoft.AspNetCore.DataProtection.EntityFrameworkCore`
 (`PersistKeysToDbContext<ApplicationDbContext>`). It keeps the key ring durable, so the wrapped
-audit keys and the external-login cookie survive restarts (R14).
+audit keys survive restarts (R14).
 
 ---
 
@@ -336,9 +336,9 @@ Connection and timeout errors become `SessionStoreUnavailableException` → `503
 Rules:
 
 - Every login attempt writes one `Login`/`ExternalLogin` event (FR-014, SC-005). The attempt that
-  trips the lockout also writes a `LockoutTriggered` event. A failed or cancelled provider sign-in
-  writes `ExternalLogin` `Failed`, with the user id only when a linked account is known (FR-020,
-  FR-022a).
+  trips the lockout also writes a `LockoutTriggered` event. A provider credential that fails verification
+  writes `ExternalLogin` `Failed` without a user; an e-mail conflict (FR-022a) writes it for the
+  linked account. A sign-in cancelled at the provider never reaches the API.
 - An event without a user holds only type, outcome and time (FR-014).
 - Routine refreshes are not audited.
 - No e-mail, password or token is ever part of an event.
@@ -366,7 +366,6 @@ later sink's setup applies it).
 
 | State | Where | Lifetime | Purpose |
 |---|---|---|---|
-| Pending external sign-in | encrypted cookie `Liftingo.External` (auth scheme) | `ExternalLogin:PendingTimeout` (10 min) | provider name, provider key, e-mail (if any), display name, device id, until consent (FR-021). Used for new users and for takeovers of unverified accounts (R10); whether an account exists is looked up again on `complete`, not stored |
 | Failed-login throttle for unknown e-mails | Redis `login-throttle:{emailHash}` (see above) | until the counter is zero and the lockout has ended | equal lockout behaviour, no enumeration, same on every instance and across restarts (R8, R21) |
 | Refresh token | `liftingo_rt` cookie on the client | the session's remaining TTL (≤ 30 days sliding, ≤ 90 days absolute) | |
 
@@ -392,10 +391,9 @@ All values bound to validated options classes (`ValidateOnStart`, same pattern a
 | `EmailTokens:PasswordResetLifetime` | `01:00:00` | FR-033 |
 | `EmailTokens:ProviderLinkLifetime` | `1.00:00:00` | FR-023a |
 | `EmailTokens:MaxPerAddressPerHour` | 3 (per purpose) | FR-037 |
-| `ExternalLogin:PendingTimeout` | `00:10:00` | FR-021 |
-| `Authentication:Google:ClientId/ClientSecret` | user secrets, optional | FR-020 |
+| `Authentication:Google:ClientId` | user secrets, optional | FR-020 |
 | `Authentication:Facebook:AppId/AppSecret` | user secrets, optional | FR-020 |
-| `Authentication:X:ClientId/ClientSecret` | user secrets, optional | FR-020 |
+| `Authentication:Facebook:GraphApiVersion` | `v26.0` | FR-020 (R9) |
 | `Audit:Retention` | `90.00:00:00` | FR-014 (applied by the Log Analytics table setup) |
 | `Legal:DocumentsVersion` | e.g. `2026-10-01` | FR-004 |
 | `App:FrontendBaseUrl` | `https://localhost:4200` (dev) | links in e-mails (Infrastructure), redirects (Api) |
