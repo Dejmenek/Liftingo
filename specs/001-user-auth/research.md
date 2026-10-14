@@ -538,10 +538,18 @@ assumes the following client behaviour, and the frontend feature must implement 
   sent (R5).
 - Sign in at Google (Google Identity Services, client id from `GET /auth/external/providers`) or
   Facebook (JavaScript SDK, scope `email`) and post the credential to
-  `POST /auth/external/{provider}/login`. Show the consents first on the registration page and
-  send them along; from the login page send none, and on `400 Auth.ConsentRequired` show them
-  (with an e-mail field when `emailRequired`) and resend the same credential with them
-  ([contract](contracts/auth-api.md#external-providers)).
+  `POST /auth/external/{provider}/login`. Show the consents first on the registration page, keep
+  the provider buttons disabled until both required ones are ticked, and send them along. A
+  returning user who uses the registration page is signed in, and the consents are ignored. From the
+  login page send none, and on `400 Auth.ConsentRequired` show them (explaining the takeover when
+  `accountExists`, with an e-mail field when `emailRequired`) and resend the same credential with
+  them ([contract](contracts/auth-api.md#external-providers)). Consents can't be required before
+  every provider sign-in: the API learns who is signing in only from the verified credential.
+- Facebook SDK quirks found while testing the development page: initialise it with
+  `fedCM: false`, because its remote configuration can switch `FB.login` to a FedCM request that
+  never opens a dialog and never calls back. The first `FB.login` that goes through the permission
+  dialog can answer `unknown` although the person approved; on `unknown`, check again with
+  `FB.getLoginStatus(callback, true)` before treating the sign-in as cancelled.
 - Provide pages for the link-confirmation e-mail (R17) and the password-reset e-mail (R7) that
   show the consent form when the API answers `Auth.ConsentRequired`, and resubmit with the
   consents.
