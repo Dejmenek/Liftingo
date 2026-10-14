@@ -64,16 +64,17 @@
     const facebookGraphVersion = 'v26.0';
     const deviceIdKey = 'liftingo.deviceId';
 
-    const $ = id => document.getElementById(id);
-    const tokenField = $('token');
-    const logView = $('log');
+    // Not "$": Visual Studio's Browser Link script expects a global $ to be jQuery.
+    const byId = id => document.getElementById(id);
+    const tokenField = byId('token');
+    const logView = byId('log');
 
     let deviceId = localStorage.getItem(deviceIdKey);
     if (!deviceId) {
       deviceId = crypto.randomUUID();
       localStorage.setItem(deviceIdKey, deviceId);
     }
-    $('device-id').textContent = deviceId;
+    byId('device-id').textContent = deviceId;
 
     // The token lives only in this page: in this variable's provider and the token field.
     let currentProvider = null;
@@ -84,7 +85,7 @@
 
     function useToken(provider, token) {
       currentProvider = provider;
-      $('provider-name').textContent = provider;
+      byId('provider-name').textContent = provider;
       tokenField.value = token;
     }
 
@@ -98,10 +99,10 @@
       const url = `/api/v1/auth/external/${encodeURIComponent(currentProvider)}/login`;
       const body = {
         token,
-        acceptTermsAndAge: $('accept-terms').checked ? true : null,
-        acceptHealthData: $('accept-health').checked ? true : null,
-        acceptMarketing: $('accept-marketing').checked ? true : null,
-        email: $('email').value.trim() || null,
+        acceptTermsAndAge: byId('accept-terms').checked ? true : null,
+        acceptHealthData: byId('accept-health').checked ? true : null,
+        acceptMarketing: byId('accept-marketing').checked ? true : null,
+        email: byId('email').value.trim() || null,
       };
 
       try {
@@ -139,14 +140,14 @@
           send();
         },
       });
-      google.accounts.id.renderButton($('google-button'), { theme: 'outline', size: 'large', text: 'continue_with' });
+      google.accounts.id.renderButton(byId('google-button'), { theme: 'outline', size: 'large', text: 'continue_with' });
     }
 
     async function setUpFacebook(appId) {
       await loadScript('https://connect.facebook.net/en_US/sdk.js');
       FB.init({ appId, version: facebookGraphVersion, xfbml: false, cookie: false });
 
-      const button = $('facebook-button');
+      const button = byId('facebook-button');
       button.hidden = false;
       button.addEventListener('click', () => {
         FB.login(response => {
@@ -166,7 +167,7 @@
       log(`GET /api/v1/auth/external/providers -> ${response.status}\n${JSON.stringify(providers, null, 2)}`);
 
       if (providers.length === 0) {
-        $('no-providers').hidden = false;
+        byId('no-providers').hidden = false;
         return;
       }
 
@@ -178,8 +179,8 @@
       }
     }
 
-    $('send-again').addEventListener('click', send);
-    $('clear-log').addEventListener('click', () => { logView.textContent = ''; });
+    byId('send-again').addEventListener('click', send);
+    byId('clear-log').addEventListener('click', () => { logView.textContent = ''; });
     start().catch(error => log(`Could not read the providers: ${error.message}`));
   </script>
 </body>
