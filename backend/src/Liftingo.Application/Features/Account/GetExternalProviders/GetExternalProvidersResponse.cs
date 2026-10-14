@@ -1,4 +1,4 @@
 namespace Liftingo.Application.Features.Account.GetExternalProviders;
 
-/// <param name="Providers">Route names (<c>google</c>, <c>facebook</c>, <c>x</c>) of the configured providers.</param>
-public sealed record GetExternalProvidersResponse(IReadOnlyList<string> Providers);
+/// <param name="Providers">The configured providers, in a stable order.</param>
+public sealed record GetExternalProvidersResponse(IReadOnlyList<ExternalProviderSummary> Providers);

@@ -1,5 +1,6 @@
 using Liftingo.Api.Http;
 using Liftingo.Application.Common.Result;
+using Liftingo.Application.Features.Account.Shared;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -108,6 +109,30 @@ public class ResultExtensionsTests
         await problem.ExecuteAsync(httpContext);
 
         Assert.Equal("0", httpContext.Response.Headers.RetryAfter.ToString());
+    }
+
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public void ToProblem_ConsentRequiredError_Returns400WithAccountExistsAndEmailRequired(bool accountExists, bool emailRequired)
+    {
+        ProblemHttpResult problem = Assert.IsType<ProblemHttpResult>(
+            Application.Common.Result.Result.Failure(new ConsentRequiredError(accountExists, emailRequired)).ToProblem());
+
+        Assert.Equal(StatusCodes.Status400BadRequest, problem.StatusCode);
+        Assert.Equal(ConsentRequiredError.ErrorCode, problem.ProblemDetails.Extensions[ResultExtensions.CodeExtension]);
+        Assert.Equal(accountExists, problem.ProblemDetails.Extensions[ResultExtensions.AccountExistsExtension]);
+        Assert.Equal(emailRequired, problem.ProblemDetails.Extensions[ResultExtensions.EmailRequiredExtension]);
+    }
+
+    [Fact]
+    public void ToProblem_OtherError_HasNoConsentExtensions()
+    {
+        ProblemHttpResult problem = Assert.IsType<ProblemHttpResult>(
+            Application.Common.Result.Result.Failure(Error.Validation("Auth.ConsentRequired", "Opis")).ToProblem());
+
+        Assert.DoesNotContain(ResultExtensions.AccountExistsExtension, problem.ProblemDetails.Extensions.Keys);
+        Assert.DoesNotContain(ResultExtensions.EmailRequiredExtension, problem.ProblemDetails.Extensions.Keys);
     }
 
     [Fact]

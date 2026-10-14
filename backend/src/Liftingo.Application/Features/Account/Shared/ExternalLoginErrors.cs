@@ -5,22 +5,21 @@ namespace Liftingo.Application.Features.Account.Shared;
 /// <summary>Errors that more than one external-login slice answers with.</summary>
 public static class ExternalLoginErrors
 {
-    // The provider failed, the user cancelled there, or the external cookie is missing or invalid. The
-    // callback never shows this as a body: Api redirects to the login page.
-    public static readonly Error Failed = Error.Failure(
+    // The provider credential is invalid, expired, or was issued to another application.
+    public static readonly Error Failed = Error.Unauthorized(
         "Auth.ExternalLoginFailed",
-        "Logowanie przez dostawcę nie zostało dokończone.");
+        "Nie udało się potwierdzić logowania u dostawcy. Zaloguj się ponownie.");
 
     // The provider identity is linked to one account, but the provider now reports another account's e-mail.
-    // Api redirects to the login page.
     public static readonly Error ProviderEmailConflict = Error.Conflict(
         "Auth.ProviderEmailConflict",
         "Adres e-mail od dostawcy należy do innego konta.");
 
-    public static readonly Error Expired = Error.Validation(
-        "Auth.ExternalLoginExpired",
-        "Logowanie przez dostawcę wygasło albo zostało anulowane. Zaloguj się ponownie.");
+    public static readonly Error ProviderUnavailable = Error.NotFound(
+        "Auth.ProviderUnavailable",
+        "Logowanie przez tego dostawcę jest niedostępne.");
 
+    // Link confirmation for an account whose e-mail is not verified yet.
     public static readonly Error ConsentRequired = Error.Validation(
         "Auth.ConsentRequired",
         "Adres e-mail tego konta nie był jeszcze potwierdzony. Aby połączyć logowanie, potwierdź ponownie zgody: " +

@@ -1,4 +1,5 @@
 using Liftingo.Application.Common.Result;
+using Liftingo.Application.Features.Account.Shared;
 using Microsoft.AspNetCore.Http.HttpResults;
 using System.Globalization;
 
@@ -9,6 +10,8 @@ public static class ResultExtensions
     public const string CodeExtension = "code";
     public const string ErrorsExtension = "errors";
     public const string RetryAfterExtension = "retryAfter";
+    public const string AccountExistsExtension = "accountExists";
+    public const string EmailRequiredExtension = "emailRequired";
 
     /// <summary>
     /// Maps a failed <see cref="Result"/> to an RFC 9457 ProblemDetails response.
@@ -43,6 +46,13 @@ public static class ResultExtensions
                     statusCode: ToStatusCode(error.Type),
                     extensions: extensions),
                 lockedOutError.RetryAfter);
+        }
+
+        // The client needs these to word the consent form, so they travel as extensions next to the code.
+        if (error is ConsentRequiredError consentRequiredError)
+        {
+            extensions[AccountExistsExtension] = consentRequiredError.AccountExists;
+            extensions[EmailRequiredExtension] = consentRequiredError.EmailRequired;
         }
 
         return Results.Problem(

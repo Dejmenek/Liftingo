@@ -17,11 +17,7 @@ public static class RouteConsts
         public const string ForgotPassword = "/auth/password/forgot";
         public const string ResetPassword = "/auth/password/reset";
         public const string ExternalProviders = "/auth/external/providers";
-        public const string StartExternalLogin = "/auth/external/{provider}/start";
-        public const string ExternalLoginCallback = "/auth/external/callback";
-        public const string PendingExternalLogin = "/auth/external/pending";
-        public const string CompleteExternalLogin = "/auth/external/complete";
-        public const string CancelExternalLogin = "/auth/external/cancel";
+        public const string ExternalLogin = "/auth/external/{provider}/login";
         public const string ConfirmProviderLink = "/auth/external/confirm-link";
     }
 }

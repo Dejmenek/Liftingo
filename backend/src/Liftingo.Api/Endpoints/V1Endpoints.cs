@@ -23,11 +23,7 @@ internal static class V1Endpoints
         ForgotPasswordEndpoint.Map(v1);
         ResetPasswordEndpoint.Map(v1);
         GetExternalProvidersEndpoint.Map(v1);
-        StartExternalLoginEndpoint.Map(v1);
-        HandleExternalLoginCallbackEndpoint.Map(v1);
-        GetPendingExternalLoginEndpoint.Map(v1);
-        CompleteExternalLoginEndpoint.Map(v1);
-        CancelExternalLoginEndpoint.Map(v1);
+        ExternalLoginEndpoint.Map(v1);
         ConfirmProviderLinkEndpoint.Map(v1);
 
         return v1;

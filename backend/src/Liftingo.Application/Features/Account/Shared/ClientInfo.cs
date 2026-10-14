@@ -9,21 +9,11 @@ namespace Liftingo.Application.Features.Account.Shared;
 public sealed record ClientInfo(string? IpAddress, string DeviceType, Guid DeviceId)
 {
     /// <param name="deviceIdHeader">The raw device id header. A missing or malformed one counts as a new device.</param>
-    /// <param name="deviceIdOverride">
-    /// A device id from somewhere other than the header (e.g. the start of an external sign-in). Wins over the
-    /// header when given.
-    /// </param>
-    public static ClientInfo Create(string? ipAddress, string? userAgent, string? deviceIdHeader, Guid? deviceIdOverride = null)
-    {
-        Guid deviceId = deviceIdOverride is { } given && given != Guid.Empty
-            ? given
-            : ParseDeviceId(deviceIdHeader) ?? Guid.NewGuid();
-
-        return new ClientInfo(ipAddress, DeviceDescriptor.Describe(userAgent), deviceId);
-    }
+    public static ClientInfo Create(string? ipAddress, string? userAgent, string? deviceIdHeader) =>
+        new(ipAddress, DeviceDescriptor.Describe(userAgent), ParseDeviceId(deviceIdHeader) ?? Guid.NewGuid());
 
     /// <returns>The device id, or <c>null</c> when <paramref name="value"/> is missing, malformed or empty.</returns>
-    public static Guid? ParseDeviceId(string? value) =>
+    private static Guid? ParseDeviceId(string? value) =>
         Guid.TryParse(value, out Guid parsed) && parsed != Guid.Empty ? parsed : null;
 
     public SessionDevice ToSessionDevice() => new(DeviceId, DeviceType);
