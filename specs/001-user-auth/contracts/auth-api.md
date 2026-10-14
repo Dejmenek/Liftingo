@@ -19,6 +19,12 @@ Application slice folder it calls (research R19, R22). `ResultExtensions.ToProbl
 where noted: the `429 Auth.LockedOut` for an unknown e-mail now holds across restarts and
 instances (FR-013), and e-mails are sent after the save (FR-029).
 
+**Rev. f (2026-10-14)**: provider sign-in uses a credential the client gets from the provider
+(research R9). `start`, `callback`, `pending`, `complete` and `cancel` are replaced by `POST
+/auth/external/{provider}/login`; `GET /auth/external/providers` returns client ids; the
+`Liftingo.External` cookie, the frontend redirects and `Auth.ExternalLoginExpired` are gone.
+Twitter (X) is deferred.
+
 ## Conventions
 
 | Item | Value |
@@ -27,7 +33,7 @@ instances (FR-013), and e-mails are sent after the save (FR-029).
 | Transport | HTTPS only (TLS 1.2+); HSTS outside Development (FR-039) |
 | Refresh cookie | `liftingo_rt`; `HttpOnly; Secure; SameSite=Lax; Path=/api/v1/auth/session; Max-Age=<session's remaining TTL, ≤ 2592000>` (never past the 90-day absolute lifetime, FR-010a) |
 | Rate limit | every endpoint is under the existing global limiter: per IP without a bearer, per user with one (FR-040) |
-| Device header | `X-Device-Id: <uuid>` on register, login, external complete, confirm-link (optional; a missing or invalid value counts as a new device) |
+| Device header | `X-Device-Id: <uuid>` on register, login, provider login, confirm-link (optional; a missing or invalid value counts as a new device) |
 | Auth required | 🔒 = valid bearer token with an active session. A token whose session was revoked is rejected with `401` even before it expires (FR-015b) |
 
 Shared response body `AuthSession` (returned by every endpoint that signs a user in, together with
@@ -62,9 +68,10 @@ Shared error codes:
 | `Auth.VerificationLinkInvalid` | 400 | unknown token, or an expired or superseded token of a still-unverified account |
 | `Auth.ResetLinkInvalid` | 400 | used, expired, superseded or unknown reset token |
 | `Auth.ProviderLinkInvalid` | 400 | used, expired, superseded or unknown link-confirmation token |
-| `Auth.ConsentRequired` | 400 | link confirmation or password reset for an unverified account sent without both required consents; token stays usable |
+| `Auth.ConsentRequired` | 400 | provider login that would create or take over an account, or link confirmation or password reset for an unverified account, sent without both required consents; the token stays usable |
 | `Auth.ProviderAlreadyLinked` | 409 | the provider identity in a link-confirmation token is already linked to an account |
-| `Auth.ExternalLoginExpired` | 400 | no pending external sign-in (cookie missing/expired) |
+| `Auth.ExternalLoginFailed` | 401 | provider credential invalid, expired or issued for another application |
+| `Auth.ProviderEmailConflict` | 409 | provider login linked to one account returns another account's e-mail |
 | `Auth.ProviderUnavailable` | 404 | provider not configured |
 | `RateLimit.Exceeded` | 429 | existing global limiter, `Retry-After` header; distinct from `Auth.LockedOut` by `code` |
 | `Service.Unavailable` | 503 | session store (Redis) unreachable; `Retry-After: 30` (FR-015c). Any endpoint that issues, renews, revokes or checks a session, including every 🔒 endpoint |
@@ -218,73 +225,68 @@ logs in normally.
 
 ## External providers
 
-Provider names in routes: `google`, `facebook`, `x`.
+Provider names in routes: `google`, `facebook`. The client signs in at the provider itself and
+posts the provider's credential; the API never redirects (R9).
 
 ### `GET /auth/external/providers` — `GetExternalProvidersEndpoint` → `Features/Account/GetExternalProviders/`
 
-Response `200`: `{ "providers": ["google", "facebook"] }` — configured providers only.
+Response `200`, configured providers only:
 
-### `GET /auth/external/{provider}/start?deviceId={uuid}` — `StartExternalLoginEndpoint` → `Features/Account/StartExternalLogin/`
+```json
+{
+  "providers": [
+    { "name": "google", "clientId": "1234-abc.apps.googleusercontent.com" },
+    { "name": "facebook", "clientId": "987654321" }
+  ]
+}
+```
 
-Browser navigation, not XHR. Response: `302` to the provider (challenge) · `404
-Auth.ProviderUnavailable`.
+`clientId` is the public id the provider's script needs (Google client id, Facebook app id).
 
-### `GET /auth/external/callback` — `HandleExternalLoginCallbackEndpoint` → `Features/Account/HandleExternalLoginCallback/`
+### `POST /auth/external/{provider}/login` — `ExternalLoginEndpoint` → `Features/Account/ExternalLogin/`
 
-Target of the provider handler's redirect. Reads the `Liftingo.External` cookie. Always responds
-`302` to the frontend:
-
-| Situation | Redirect | Server state |
-|---|---|---|
-| Login already linked | `{Frontend}/auth/callback` | session + refresh cookie, external cookie deleted, audit `ExternalLogin` |
-| E-mail matches a **verified** account | `{Frontend}/auth/callback` | login linked, session + cookie, audit `ProviderLinked` + `ExternalLogin` |
-| E-mail matches an **unverified** account (takeover) | `{Frontend}/auth/consent` | nothing persisted; external cookie kept; consents asked again (R10) |
-| New user | `{Frontend}/auth/consent` | nothing persisted; external cookie kept |
-| Matched account is locked out (FR-012) | `{Frontend}/login?error=lockedOut&retryAfter=<ISO>` | nothing persisted, external cookie deleted, not counted as a failed attempt |
-| Login already linked to account A, provider e-mail belongs to account B (FR-022a) | `{Frontend}/login?error=emailConflict` | nothing persisted, external cookie deleted, audit `ExternalLogin` `Failed` for A |
-| Provider error / cancelled / ticket invalid (FR-020) | `{Frontend}/login?error=external` | external cookie deleted, audit `ExternalLogin` `Failed` without user, IP or device |
-
-A provider e-mail that belongs to no account never blocks the linked login and never changes the
-account's e-mail.
-
-After `/auth/callback` the SPA calls `POST /auth/session/refresh` to get its access token.
-
-### `GET /auth/external/pending` — `GetPendingExternalLoginEndpoint` → `Features/Account/GetPendingExternalLogin/`
-
-Response `200`:
-`{ "provider": "google", "email": "anna@gmail.com", "emailRequired": false, "accountExists": false }`
-(`email` is `null` and `emailRequired` is `true` when the provider gave none; `accountExists` is
-`true` when the provider e-mail belongs to an unverified account, so the page can explain that the
-consents are asked again) · `400 Auth.ExternalLoginExpired`.
-
-### `POST /auth/external/complete` — `CompleteExternalLoginEndpoint` → `Features/Account/CompleteExternalLogin/`
-
-US5, FR-021…025, FR-023a.
+US5, FR-020…025, FR-023a. Anonymous.
 
 Request:
 
 ```json
 {
-  "acceptTermsAndAge": true,
-  "acceptHealthData": true,
-  "acceptMarketing": false,
+  "token": "<Google ID token | Facebook access token>",
+  "acceptTermsAndAge": null,
+  "acceptHealthData": null,
+  "acceptMarketing": null,
   "email": null
 }
 ```
 
-`email` is required only when `emailRequired` was `true`. Same consent validation as register.
-
-The handler re-checks the e-mail (provider-supplied or typed) against existing accounts:
+The consent fields are read only when the request would create an account or take over an
+unverified one. A required consent that is missing or `false` then gets `400
+Auth.ConsentRequired`, and the client sends the same `token` again with the consents. `email` is
+read only when the provider gave none.
 
 | Case | Response | Side effects |
 |---|---|---|
-| New address | `201` + `AuthSession` + cookie | user (`EmailConfirmed` = provider e-mail present), external login, 3 consents, session, `KnownDevice`; welcome-only e-mail (provider e-mail) or verification+welcome e-mail (typed e-mail) |
-| Provider e-mail of an unverified account (takeover, R10) | `200` + `AuthSession` + cookie | login added, e-mail verified, password removed, old consents superseded + 3 new, e-mail tokens superseded; then all old sessions revoked, audit `ProviderLinked`, new session |
-| Typed e-mail of an existing account (FR-023a, R17) | `202` `{ "status": "linkConfirmationSent" }` | `ProviderLinkConfirmation` token + e-mail (none at the FR-037 limit, same response); submitted consents not recorded |
+| Login already linked | `200` + `AuthSession` + cookie | session, `KnownDevice`, audit `ExternalLogin`, new-device e-mail if new |
+| Provider e-mail of a **verified** account | `200` + `AuthSession` + cookie | login added, audit `ProviderLinked` + `ExternalLogin`, session as above |
+| Provider e-mail of an **unverified** account (takeover, R10), consents given | `200` + `AuthSession` + cookie | login added, e-mail verified, password removed, old consents superseded + 3 new, e-mail tokens superseded; then all old sessions revoked, audit `ProviderLinked`, new session |
+| New address, consents given | `201` + `AuthSession` + cookie | user (`EmailConfirmed` = provider e-mail present), external login, 3 consents, session, `KnownDevice`; welcome-only e-mail (provider e-mail) or verification+welcome e-mail (typed e-mail) |
+| Typed e-mail of an existing account (FR-023a, R17), consents given | `202` `{ "status": "linkConfirmationSent" }` | `ProviderLinkConfirmation` token + e-mail (none at the FR-037 limit, same response); consents not recorded |
 
-Other responses: `400` (validation) · `400 Auth.ExternalLoginExpired` (also after the 10-minute
-pending timeout, FR-021) · `429 Auth.LockedOut` (takeover of a locked account). The external
-cookie is deleted in all three success cases.
+Refusals (nothing persisted, never counted as a failed login attempt):
+
+| Response | When |
+|---|---|
+| `400 Validation.*` | `token` empty, or `email` not a valid address |
+| `400 Auth.ConsentRequired` | consents needed and not both given. Extensions: `accountExists` (`true` for a takeover, so the page can explain why consents are asked again) and `emailRequired` (`true` when the provider gave no e-mail and none was sent) |
+| `400 Validation.EmailRequired` | consents given, provider gave no e-mail, and `email` is empty |
+| `401 Auth.ExternalLoginFailed` | credential invalid, expired, or issued for another application (FR-020); audit `ExternalLogin` `Failed` without user, IP or device |
+| `404 Auth.ProviderUnavailable` | provider unknown or not configured |
+| `409 Auth.ProviderEmailConflict` | login linked to account A, provider e-mail belongs to account B (FR-022a); audit `ExternalLogin` `Failed` for A |
+| `409 Auth.EmailTaken` | the address or provider identity was taken between the check and the commit |
+| `429 Auth.LockedOut` | the matched account is locked out (FR-012) |
+
+A provider e-mail that belongs to no account never blocks the linked login and never changes the
+account's e-mail.
 
 ### `POST /auth/external/confirm-link` — `ConfirmProviderLinkEndpoint` → `Features/Account/ConfirmProviderLink/`
 
@@ -308,12 +310,9 @@ Responses: `200` + `AuthSession` + cookie · `400 Auth.ProviderLinkInvalid` · `
 Auth.ConsentRequired` (token stays usable) · `409 Auth.ProviderAlreadyLinked` (token consumed) ·
 `429 Auth.LockedOut` (account locked; token stays usable).
 
-Side effects: login added; for an unverified account the takeover from the row above; token
-consumed; audit `ProviderLinked`; session, `KnownDevice` and new-device e-mail as for a login.
-
-### `POST /auth/external/cancel` — `CancelExternalLoginEndpoint` (Api only, no slice)
-
-US5-2. Deletes the external cookie. Response `204`.
+Side effects: login added; for an unverified account the takeover from the provider login table
+above; token consumed; audit `ProviderLinked`; session, `KnownDevice` and new-device e-mail as
+for a login.
 
 ---
 
@@ -335,11 +334,7 @@ public static class Auth
     public const string ForgotPassword = "/auth/password/forgot";
     public const string ResetPassword = "/auth/password/reset";
     public const string ExternalProviders = "/auth/external/providers";
-    public const string StartExternalLogin = "/auth/external/{provider}/start";
-    public const string ExternalLoginCallback = "/auth/external/callback";
-    public const string PendingExternalLogin = "/auth/external/pending";
-    public const string CompleteExternalLogin = "/auth/external/complete";
-    public const string CancelExternalLogin = "/auth/external/cancel";
+    public const string ExternalLogin = "/auth/external/{provider}/login";
     public const string ConfirmProviderLink = "/auth/external/confirm-link";
 }
 ```
