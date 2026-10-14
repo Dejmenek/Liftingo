@@ -4,7 +4,7 @@
 
 - .NET 10, ASP.NET Core Web API with Minimal APIs
 - EF Core with SQL Server (local dev) / Azure SQL (prod)
-- ASP.NET Core Identity + external providers (Google/Facebook/Twitter (X)) + JWT auth with refresh tokens
+- ASP.NET Core Identity + Google/Facebook sign-in (client-supplied provider token, verified by the API) + JWT auth with refresh tokens
 - Redis (StackExchange.Redis) for user sessions and refresh tokens; Azure Cache for Redis in prod
 - Azure Monitor Log Analytics for the security audit log (own custom table, separate from application logs)
 - Hangfire for scheduled/background jobs
@@ -44,7 +44,7 @@ Backend combines vertical slice architecture with Clean Architecture layering: f
 ### `Liftingo.Infrastructure`: implementations of the ports
 
 - `ApplicationDbContext : IApplicationDbContext`, EF Core entity configurations and migrations.
-- ASP.NET Core Identity and the external auth providers.
+- ASP.NET Core Identity and the external provider token verifiers (Google, Facebook).
 - Redis session store, caches and throttles.
 - External clients: Microsoft Foundry (AI), Azure Communication Services (e-mail), Azure Blob Storage, QuestPDF.
 - E-mail templates.
@@ -59,7 +59,7 @@ Backend combines vertical slice architecture with Clean Architecture layering: f
 - `RouteConsts`, route groups and the `/api/v1` prefix.
 - Mapping `Result` error types to status codes and `ProblemDetails`, plus the global exception handler.
 - Authentication schemes and authorization policies ("is the caller signed in", "does the token carry role X"). Ownership and visibility checks belong in `Application`.
-- Cookies (refresh token), redirects (external sign-in), and the `HttpContext`-based `ICurrentUser` and client info.
+- Cookies (refresh token) and the `HttpContext`-based `ICurrentUser` and client info.
 - OpenAPI metadata, CORS, HTTP rate limiting.
 - `Program.cs`: DI wiring, registering `Infrastructure` implementations against `Application` ports.
 - No business logic, no database access.

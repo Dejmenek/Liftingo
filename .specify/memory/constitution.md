@@ -202,7 +202,8 @@ Rationale: the scope is intentionally bounded; complexity beyond it threatens de
 The following stack is binding; deviations require a constitution amendment.
 
 - **Backend**: .NET 10, ASP.NET Core Web API (Minimal APIs), EF Core on SQL Server (local) /
-  Azure SQL (prod), ASP.NET Core Identity with Google/Facebook/Twitter (X) external providers and JWT auth with
+  Azure SQL (prod), ASP.NET Core Identity with Google and Facebook sign-in (the client sends the provider's token,
+  the API verifies it) and JWT auth with
   refresh tokens, Redis (StackExchange.Redis) as the store for user sessions and refresh tokens,
   Hangfire for background jobs, FluentValidation, Serilog structured logging, Azure Monitor Log
   Analytics for the security audit log (dedicated custom table, 90-day retention, KQL queries by
@@ -260,4 +261,4 @@ frontend) are the source of runtime development guidance.
 - **Dependency drift**: when a PRD requirement or tech-stack choice changes, this constitution and
   the relevant `AGENTS.md` MUST be updated in the same change.
 
-**Version**: 2.1.0 | **Ratified**: 2026-10-06 | **Last Amended**: 2026-10-13
+**Version**: 2.1.1 | **Ratified**: 2026-10-06 | **Last Amended**: 2026-10-14
